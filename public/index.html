@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Bolão da Copa 2026</title>
-  <meta name="theme-color" content="#0E1A40" />
+  <meta name="theme-color" content="#0b0b0d" />
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="icon.svg" />
@@ -17,10 +17,11 @@
 
   <!-- ================= TELA: ESCOLHER USUÁRIO ================= -->
   <section id="screen-user" class="screen" hidden>
-    <div class="tricolor-bar"></div>
+    <div class="brand-bar"></div>
     <header class="hero">
-      <div class="hero-badge">⚽ COPA 2026 · CANADÁ · MÉXICO · EUA</div>
-      <h1 class="hero-title">BOLÃO<br /><span class="gradient-text">DA FAMÍLIA</span></h1>
+      <img src="assets/logo-26.png" alt="Copa do Mundo FIFA 2026" class="hero-logo" />
+      <h1 class="hero-title">BOLÃO DA FAMÍLIA</h1>
+      <div class="hero-badge">CANADÁ · MÉXICO · EUA &nbsp;·&nbsp; 11 JUN — 19 JUL</div>
       <p class="hero-sub">Quem é você? Toque no seu nome 👇</p>
     </header>
 
@@ -36,15 +37,23 @@
       <button id="btn-create-user" class="btn-primary">Pronto, vamos lá! 🎉</button>
       <p id="add-error" class="form-error" hidden></p>
     </div>
+
+    <figure class="cities-card">
+      <img src="assets/host-cities.jpg" alt="Logos das 16 cidades-sede da Copa 2026" loading="lazy" />
+      <figcaption>As 16 cidades-sede da Copa 2026</figcaption>
+    </figure>
   </section>
 
   <!-- ================= TELA: APP ================= -->
   <section id="screen-app" class="screen" hidden>
-    <div class="tricolor-bar"></div>
+    <div class="brand-bar"></div>
     <header class="app-header">
-      <div class="app-title">
-        <span class="app-title-small">BOLÃO DA FAMÍLIA</span>
-        <span class="app-title-big gradient-text">COPA 2026</span>
+      <div class="app-brand">
+        <img src="assets/logo-26.png" alt="" class="brand-logo" />
+        <div class="app-title">
+          <span class="app-title-small">BOLÃO DA FAMÍLIA</span>
+          <span class="app-title-big">COPA 2026</span>
+        </div>
       </div>
       <button id="btn-switch-user" class="user-chip" title="Trocar de pessoa">
         <span id="chip-avatar">⚽</span>
