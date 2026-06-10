@@ -569,7 +569,7 @@
         savedMsg.style.color = 'var(--red)';
         toast(err.message, true);
       }
-    }, 700);
+    }, 3500); // espera você terminar de mexer no placar antes de salvar
   }
 
   // ------------------------------------------------------------------ aba JOGOS
