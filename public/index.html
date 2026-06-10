@@ -15,6 +15,22 @@
 </head>
 <body>
 
+  <!-- ================= TELA: ENTRADA (pergunta da fase) ================= -->
+  <section id="screen-entry" class="screen" hidden>
+    <div class="brand-bar"></div>
+    <div class="entry-wrap">
+      <div class="entry-bg"></div>
+      <img src="assets/logo-26.png" alt="Copa do Mundo FIFA 2026" class="entry-logo" />
+      <p class="entry-kicker">Bolão da Família</p>
+      <h1 class="entry-question">Você já fez seus palpites para a</h1>
+      <p id="entry-phase" class="entry-phase">Fase de Grupos</p>
+      <div class="entry-actions">
+        <button id="btn-entry-sim" class="btn-entry primary">Já fiz</button>
+        <button id="btn-entry-nao" class="btn-entry">Ainda não</button>
+      </div>
+    </div>
+  </section>
+
   <!-- ================= TELA: ESCOLHER USUÁRIO ================= -->
   <section id="screen-user" class="screen" hidden>
     <div class="brand-bar"></div>
@@ -23,7 +39,7 @@
       <img src="assets/logo-26.png" alt="Copa do Mundo FIFA 2026" class="hero-logo" />
       <h1 class="hero-title">BOLÃO <span class="mint">DA FAMÍLIA</span></h1>
       <div class="hero-badge">CANADÁ · MÉXICO · EUA &nbsp;·&nbsp; 11 JUN — 19 JUL</div>
-      <p class="hero-sub">Quem é você? Toque no seu nome 👇</p>
+      <p class="hero-sub">Quem é você? Toque no seu nome</p>
     </header>
 
     <div id="user-grid" class="user-grid"></div>
@@ -35,7 +51,7 @@
       <input id="new-name" type="text" maxlength="24" placeholder="Ex.: Vó Maria" autocomplete="off" />
       <label class="form-label">Escolha sua carinha</label>
       <div id="emoji-grid" class="emoji-grid"></div>
-      <button id="btn-create-user" class="btn-primary">Pronto, vamos lá! 🎉</button>
+      <button id="btn-create-user" class="btn-primary">Pronto, vamos lá!</button>
       <p id="add-error" class="form-error" hidden></p>
     </div>
 
@@ -43,7 +59,7 @@
       <div class="curio-head">
         <span class="curio-flag">⚽</span>
         <div>
-          <p class="curio-label">💡 Você sabia?</p>
+          <p class="curio-label">Você sabia?</p>
           <p class="curio-country"></p>
         </div>
       </div>
@@ -73,48 +89,91 @@
       </button>
     </header>
 
-    <!-- ABA JOGOS -->
-    <main id="tab-jogos" class="tab">
-      <nav id="day-nav" class="day-nav"></nav>
+    <!-- ABA PALPITAR -->
+    <main id="tab-palpitar" class="tab">
+      <div id="palpitar-progress" class="progress-card" hidden>
+        <p class="progress-text"></p>
+        <div class="progress-bar"><div class="progress-fill"></div></div>
+      </div>
+      <div id="palpitar-list" class="match-list"></div>
+    </main>
 
+    <!-- ABA JOGOS -->
+    <main id="tab-jogos" class="tab" hidden>
+      <nav id="jogos-daynav" class="day-nav"></nav>
       <aside class="curio-card slim">
         <div class="curio-head">
           <span class="curio-flag">⚽</span>
           <div>
-            <p class="curio-label">💡 Você sabia?</p>
+            <p class="curio-label">Você sabia?</p>
             <p class="curio-country"></p>
           </div>
         </div>
         <p class="curio-text"></p>
       </aside>
-
-      <div id="match-list" class="match-list">
-        <p class="loading">Carregando os jogos… ⚽</p>
+      <div id="jogos-list" class="match-list">
+        <p class="loading">Carregando os jogos…</p>
       </div>
     </main>
 
     <!-- ABA RANKING -->
     <main id="tab-ranking" class="tab" hidden>
-      <h2 class="section-title">🏆 Classificação</h2>
+      <h2 class="section-title">Classificação</h2>
       <div id="leaderboard" class="leaderboard"></div>
       <details class="rules">
         <summary>Como funciona a pontuação?</summary>
         <ul>
-          <li><b>🎯 5 pontos</b> — acertou o placar exato</li>
-          <li><b>👍 3 pontos</b> — acertou quem ganha (ou empate) e os gols de um dos times</li>
-          <li><b>✅ 2 pontos</b> — acertou só quem ganha (ou o empate)</li>
+          <li><b>5 pontos</b> — acertou o placar exato</li>
+          <li><b>3 pontos</b> — acertou quem ganha (ou empate) e os gols de um dos times</li>
+          <li><b>2 pontos</b> — acertou só quem ganha (ou o empate)</li>
         </ul>
         <p><b>Desempate:</b> 1º quem tem mais placares exatos; 2º quem acertou mais resultados; 3º quem fez mais palpites.</p>
-        <p>⏰ O palpite trava na hora que a bola rola. Os palpites dos outros só aparecem depois que o jogo começa!</p>
+        <p>O palpite trava na hora que a bola rola. Os palpites dos outros só aparecem depois que o jogo começa.</p>
       </details>
     </main>
 
+    <!-- ABA GALERA -->
+    <main id="tab-galera" class="tab" hidden>
+      <h2 class="section-title">Palpites da galera</h2>
+      <div id="galera-toggle" class="seg-toggle">
+        <button data-mode="jogo" class="active">Por jogo</button>
+        <button data-mode="pessoa">Por pessoa</button>
+      </div>
+      <div id="galera-jogo">
+        <nav id="galera-daynav" class="day-nav"></nav>
+        <div id="galera-list" class="match-list"></div>
+      </div>
+      <div id="galera-pessoa" hidden>
+        <div id="galera-people" class="people-row"></div>
+        <div id="galera-person-picks" class="person-picks"></div>
+      </div>
+    </main>
+
     <nav class="bottom-nav">
-      <button id="nav-jogos" class="nav-btn active" data-tab="jogos">
-        <span class="nav-icon">⚽</span><span>Jogos</span>
+      <button class="nav-btn active" data-tab="palpitar">
+        <span class="nav-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+          <span id="nav-badge" class="nav-badge" hidden></span>
+        </span>
+        <span>Palpitar</span>
       </button>
-      <button id="nav-ranking" class="nav-btn" data-tab="ranking">
-        <span class="nav-icon">🏆</span><span>Ranking</span>
+      <button class="nav-btn" data-tab="jogos">
+        <span class="nav-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8.2 15.6 11l-1.4 4.2H9.8L8.4 11Z"/><path d="M12 3v5.2M8.4 11l-4.9-1.6M15.6 11l4.9-1.6M14.2 15.2l3 4.2M9.8 15.2l-3 4.2"/></svg>
+        </span>
+        <span>Jogos</span>
+      </button>
+      <button class="nav-btn" data-tab="ranking">
+        <span class="nav-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0Z"/><path d="M7 6H4v1a4 4 0 0 0 3 3.87"/><path d="M17 6h3v1a4 4 0 0 1-3 3.87"/></svg>
+        </span>
+        <span>Ranking</span>
+      </button>
+      <button class="nav-btn" data-tab="galera">
+        <span class="nav-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M21 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </span>
+        <span>Galera</span>
       </button>
     </nav>
   </section>

@@ -5,6 +5,7 @@
   'use strict';
 
   const $ = (sel) => document.querySelector(sel);
+  const $$ = (sel) => document.querySelectorAll(sel);
 
   // URL do App da Web do Google Apps Script (termina em /exec)
   const API_URL = 'COLE_AQUI_A_URL_DO_APPS_SCRIPT';
@@ -65,7 +66,7 @@
     'quarterfinals': 'Quartas de final',
     'semifinals': 'Semifinal',
     '3rd-place-match': 'Disputa do 3º lugar',
-    'final': 'GRANDE FINAL',
+    'final': 'Grande Final',
   };
 
   function normalizeEvent(ev) {
@@ -105,12 +106,15 @@
     picks: {},        // "userId:matchId" -> {home, away}
     leaderboard: [],
     userId: localStorage.getItem('bolao_user') || null,
-    selectedDay: null,
-    expanded: new Set(),
+    selectedDayJogos: null,
+    selectedDayGalera: null,
+    galeraMode: 'jogo',     // 'jogo' | 'pessoa'
+    galeraPerson: null,
     dirty: new Set(),
     saveTimers: {},
     selectedEmoji: EMOJIS[0],
-    tab: 'jogos',
+    tab: 'palpitar',
+    pendingRoute: null,     // pra onde ir depois de escolher o usuário
   };
 
   const me = () => state.users.find((u) => u.id === state.userId) || null;
@@ -121,6 +125,21 @@
     const d = new Date(iso);
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   };
+
+  // fase atual = fase do primeiro jogo ainda não encerrado
+  function currentPhase() {
+    const m = state.matches.find((x) => !x.completed);
+    return m ? m.stage : null;
+  }
+  const phaseLabel = (slug) => STAGE_PT[slug] || 'Copa 2026';
+
+  // jogos da fase que ainda não começaram e estão sem palpite meu
+  function missingPicks(phase) {
+    if (!state.userId) return [];
+    return state.matches.filter(
+      (m) => m.stage === phase && !matchStarted(m) && !state.picks[pickKey(m.id)]
+    );
+  }
 
   // ------------------------------------------------------------------ dados
   async function fetchMatches() {
@@ -203,7 +222,6 @@
       }
       return row;
     });
-    // Desempate: pontos > placares exatos > resultados certos > nº de palpites > nome
     rows.sort(
       (a, b) =>
         b.points - a.points ||
@@ -229,10 +247,55 @@
     el.classList.toggle('error', !!isError);
     el.hidden = false;
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => (el.hidden = true), 2600);
+    toastTimer = setTimeout(() => (el.hidden = true), 3200);
   }
 
-  // ------------------------------------------------------------------ tela de usuário
+  // ------------------------------------------------------------------ telas
+  function show(screen) {
+    $('#screen-entry').hidden = screen !== 'entry';
+    $('#screen-user').hidden = screen !== 'user';
+    $('#screen-app').hidden = screen !== 'app';
+  }
+
+  // ---------- tela de entrada (pergunta da fase) ----------
+  function showEntry() {
+    const phase = currentPhase();
+    if (!phase) return enterApp('jogos'); // Copa acabou
+    $('#entry-phase').textContent = phaseLabel(phase);
+    show('entry');
+  }
+
+  function answerEntry(jaFez) {
+    const phase = currentPhase();
+    localStorage.setItem('bolao_phase_seen', phase || '');
+    state.pendingRoute = jaFez ? 'verificar' : 'palpitar';
+    if (me()) routeAfterUser();
+    else showUserScreen();
+  }
+
+  function routeAfterUser() {
+    const route = state.pendingRoute || 'palpitar';
+    state.pendingRoute = null;
+    if (route === 'verificar') {
+      const phase = currentPhase();
+      const missing = missingPicks(phase);
+      if (missing.length > 0) {
+        toast(`Opa! Faltam ${missing.length} palpites da ${phaseLabel(phase)}.`, true);
+        enterApp('palpitar');
+      } else {
+        enterApp('jogos');
+      }
+    } else {
+      enterApp(route);
+    }
+  }
+
+  // ---------- tela de usuário ----------
+  function showUserScreen() {
+    show('user');
+    renderUserScreen();
+  }
+
   function renderUserScreen() {
     const grid = $('#user-grid');
     grid.innerHTML = '';
@@ -266,7 +329,7 @@
     state.userId = id;
     localStorage.setItem('bolao_user', id);
     state.dirty.clear();
-    showApp();
+    routeAfterUser();
   }
 
   async function createUser() {
@@ -281,10 +344,9 @@
     const btn = $('#btn-create-user');
     btn.disabled = true;
     try {
-      // o Apps Script valida nome duplicado e grava na planilha
       const data = await apiPost({ action: 'addUser', name, avatar: state.selectedEmoji });
       state.users.push(data.user);
-      toast(`Bem-vindo(a), ${data.user.name}! 🎉`);
+      toast(`Bem-vindo(a), ${data.user.name}!`);
       await selectUser(data.user.id);
     } catch (err) {
       errEl.textContent = err.message;
@@ -294,165 +356,158 @@
     }
   }
 
-  // ------------------------------------------------------------------ navegação
-  function showUserScreen() {
-    $('#screen-app').hidden = true;
-    $('#screen-user').hidden = false;
-    renderUserScreen();
-  }
-
-  function showApp() {
+  // ---------- app ----------
+  function enterApp(tab) {
     if (!me()) return showUserScreen();
-    $('#screen-user').hidden = true;
-    $('#screen-app').hidden = false;
+    show('app');
     $('#chip-avatar').textContent = me().avatar;
     $('#chip-name').textContent = me().name;
-    renderAll();
+    switchTab(tab || state.tab);
   }
 
   function switchTab(tab) {
     state.tab = tab;
-    $('#tab-jogos').hidden = tab !== 'jogos';
-    $('#tab-ranking').hidden = tab !== 'ranking';
-    document.querySelectorAll('.nav-btn').forEach((b) => b.classList.toggle('active', b.dataset.tab === tab));
+    ['palpitar', 'jogos', 'ranking', 'galera'].forEach((t) => {
+      $(`#tab-${t}`).hidden = t !== tab;
+    });
+    $$('.nav-btn').forEach((b) => b.classList.toggle('active', b.dataset.tab === tab));
+    renderAll();
     window.scrollTo(0, 0);
   }
 
-  // ------------------------------------------------------------------ dias
-  function renderDayNav() {
-    const nav = $('#day-nav');
-    const days = [...new Set(state.matches.map((m) => dayOf(m.date)))].sort();
-    if (!days.length) return;
-
-    if (!state.selectedDay || !days.includes(state.selectedDay)) {
-      const today = dayOf(new Date().toISOString());
-      state.selectedDay = days.find((d) => d >= today) || days[days.length - 1];
-    }
-
-    const liveDays = new Set(state.matches.filter((m) => m.state === 'in').map((m) => dayOf(m.date)));
-    nav.innerHTML = '';
-    for (const day of days) {
-      const d = new Date(day + 'T12:00:00');
-      const pill = document.createElement('button');
-      pill.className = 'day-pill' + (day === state.selectedDay ? ' active' : '');
-      const week = d.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', '');
-      pill.innerHTML = `<small></small><span></span>${liveDays.has(day) ? '<span class="dot"></span>' : ''}`;
-      pill.querySelector('small').textContent = week;
-      pill.querySelector('span:not(.dot)').textContent = d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
-      pill.addEventListener('click', () => {
-        state.selectedDay = day;
-        renderDayNav();
-        renderMatches();
-      });
-      nav.appendChild(pill);
-    }
-    const active = nav.querySelector('.day-pill.active');
-    if (active) active.scrollIntoView({ block: 'nearest', inline: 'center' });
-  }
-
-  // ------------------------------------------------------------------ jogos
-  function teamHtml(team) {
-    const flag = team.logo
-      ? `<img src="${team.logo}" alt="" loading="lazy" />`
-      : `<span class="flag-fallback">❓</span>`;
-    return `<div class="team">${flag}<span class="tname"></span></div>`;
-  }
-
+  // ------------------------------------------------------------------ helpers de UI
   function fmtTime(iso) {
     return new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  function fmtDayLong(day) {
+    const d = new Date(day + 'T12:00:00');
+    const txt = d.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
+    return txt.charAt(0).toUpperCase() + txt.slice(1);
   }
 
   function ptsBadge(pts) {
     if (pts == null) return '';
     const cls = pts === 5 ? 'pts-5' : pts === 3 ? 'pts-3' : pts === 2 ? 'pts-2' : 'pts-0';
-    const label = pts === 5 ? '🎯 +5 pontos!' : pts === 3 ? '👍 +3 pontos' : pts === 2 ? '✅ +2 pontos' : '0 pontos';
+    const label = pts === 5 ? 'Placar exato · +5' : pts === 3 ? '+3 pontos' : pts === 2 ? '+2 pontos' : '0 pontos';
     return `<span class="pts-badge ${cls}">${label}</span>`;
   }
 
-  function renderMatches() {
-    const list = $('#match-list');
-    const matches = state.matches.filter((m) => dayOf(m.date) === state.selectedDay);
-    list.innerHTML = '';
-    if (!matches.length) {
-      list.innerHTML = '<p class="empty-note">Nenhum jogo nesse dia 😴</p>';
-      return;
-    }
-
-    let lastStage = null;
-    for (const m of matches) {
-      if (m.stagePt !== lastStage) {
-        lastStage = m.stagePt;
-        const h = document.createElement('p');
-        h.className = 'stage-heading' + (m.stage === 'final' ? ' final' : '');
-        h.textContent = m.stagePt;
-        list.appendChild(h);
-      }
-      list.appendChild(matchCard(m));
-    }
+  function teamHtml(team) {
+    const flag = team.logo
+      ? `<img src="${team.logo}" alt="" loading="lazy" />`
+      : `<span class="flag-fallback">?</span>`;
+    return `<div class="team">${flag}<span class="tname"></span></div>`;
   }
 
-  function matchCard(m) {
+  function matchShell(m, statusPill, centerHtml) {
     const card = document.createElement('article');
     card.className =
       'match-card' + (m.state === 'in' ? ' live' : '') + (m.stage === 'final' ? ' final-match' : '');
-
-    const statusPill =
-      m.state === 'in'
-        ? `<span class="live-pill">● AO VIVO ${m.clock || ''}</span>`
-        : m.state === 'post'
-        ? `<span class="done-pill">Encerrado</span>`
-        : `<span class="time-pill">🕐 ${fmtTime(m.date)}</span>`;
-
-    const showScore = m.state !== 'pre';
-    const pen =
-      m.home.shootout != null && m.away.shootout != null
-        ? `<span class="pen">(${m.home.shootout} x ${m.away.shootout} nos pênaltis)</span>`
-        : '';
-    const center = showScore
-      ? `<div class="score-center"><span class="big-score">${m.home.score ?? 0} <span style="color:#c9c2ae">x</span> ${m.away.score ?? 0}</span>${pen}</div>`
-      : `<div class="score-center"><span class="vs">VS</span></div>`;
-
     card.innerHTML = `
       <div class="match-meta"><span class="venue"></span>${statusPill}</div>
-      <div class="match-row">${teamHtml(m.home)}${center}${teamHtml(m.away)}</div>
+      <div class="match-row">${teamHtml(m.home)}${centerHtml}${teamHtml(m.away)}</div>
     `;
     card.querySelector('.venue').textContent = m.venue;
     const tnames = card.querySelectorAll('.tname');
     tnames[0].textContent = m.home.namePt;
     tnames[1].textContent = m.away.namePt;
-
-    const myPick = state.userId ? state.picks[pickKey(m.id)] : null;
-
-    if (!matchStarted(m)) {
-      card.appendChild(pickArea(m, myPick));
-    } else {
-      const div = document.createElement('div');
-      div.className = 'my-pick-result';
-      if (myPick) {
-        const pts = calcPts(myPick, m);
-        div.innerHTML = `<span>Seu palpite: <b>${myPick.home} x ${myPick.away}</b></span>${
-          m.completed ? ptsBadge(pts) : '<span class="pts-badge pts-wait">aguardando…</span>'
-        }`;
-      } else {
-        div.innerHTML = '<span class="no-pick-note">Você não deu palpite nesse jogo 😢</span>';
-      }
-      card.appendChild(div);
-      card.appendChild(othersArea(m));
-    }
     return card;
+  }
+
+  function statusPillOf(m) {
+    if (m.state === 'in') return `<span class="live-pill">● AO VIVO ${m.clock || ''}</span>`;
+    if (m.state === 'post') return `<span class="done-pill">Encerrado</span>`;
+    return `<span class="time-pill">${fmtTime(m.date)}</span>`;
+  }
+
+  function centerOf(m) {
+    if (m.state === 'pre') return `<div class="score-center"><span class="vs">VS</span></div>`;
+    const pen =
+      m.home.shootout != null && m.away.shootout != null
+        ? `<span class="pen">(${m.home.shootout} x ${m.away.shootout} nos pênaltis)</span>`
+        : '';
+    return `<div class="score-center"><span class="big-score">${m.home.score ?? 0} <span class="score-x">x</span> ${m.away.score ?? 0}</span>${pen}</div>`;
+  }
+
+  function dayNav(container, days, selected, liveDays, onPick) {
+    container.innerHTML = '';
+    for (const day of days) {
+      const d = new Date(day + 'T12:00:00');
+      const pill = document.createElement('button');
+      pill.className = 'day-pill' + (day === selected ? ' active' : '');
+      const week = d.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', '');
+      pill.innerHTML = `<small></small><span></span>${liveDays.has(day) ? '<span class="dot"></span>' : ''}`;
+      pill.querySelector('small').textContent = week;
+      pill.querySelector('span:not(.dot)').textContent = d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+      pill.addEventListener('click', () => onPick(day));
+      container.appendChild(pill);
+    }
+    const active = container.querySelector('.day-pill.active');
+    if (active) active.scrollIntoView({ block: 'nearest', inline: 'center' });
+  }
+
+  // ------------------------------------------------------------------ aba PALPITAR
+  function renderPalpitar() {
+    const list = $('#palpitar-list');
+    const phase = currentPhase();
+    const future = state.matches.filter((m) => !matchStarted(m));
+
+    // progresso da fase
+    const progEl = $('#palpitar-progress');
+    if (phase && state.userId) {
+      const phaseMatches = state.matches.filter((m) => m.stage === phase);
+      const done = phaseMatches.filter((m) => state.picks[pickKey(m.id)]).length;
+      const pct = phaseMatches.length ? Math.round((done / phaseMatches.length) * 100) : 0;
+      progEl.hidden = false;
+      progEl.querySelector('.progress-text').textContent =
+        `${phaseLabel(phase)} — você palpitou ${done} de ${phaseMatches.length} jogos`;
+      progEl.querySelector('.progress-fill').style.width = pct + '%';
+    } else {
+      progEl.hidden = true;
+    }
+
+    list.innerHTML = '';
+    if (!future.length) {
+      list.innerHTML = '<p class="empty-note">Nenhum jogo aberto pra palpite agora.</p>';
+      return;
+    }
+
+    let lastDay = null, lastStage = null;
+    for (const m of future) {
+      const day = dayOf(m.date);
+      if (day !== lastDay) {
+        lastDay = day;
+        const h = document.createElement('h3');
+        h.className = 'day-heading';
+        h.textContent = fmtDayLong(day);
+        list.appendChild(h);
+        lastStage = null;
+      }
+      if (m.stagePt !== lastStage) {
+        lastStage = m.stagePt;
+        const s = document.createElement('p');
+        s.className = 'stage-heading' + (m.stage === 'final' ? ' final' : '');
+        s.textContent = m.stagePt;
+        list.appendChild(s);
+      }
+      const card = matchShell(m, statusPillOf(m), centerOf(m));
+      card.appendChild(pickArea(m, state.picks[pickKey(m.id)]));
+      list.appendChild(card);
+    }
   }
 
   function pickArea(m, myPick) {
     const wrap = document.createElement('div');
     wrap.className = 'pick-area';
-    wrap.innerHTML = `<p class="pick-label">Seu palpite — toque em + ou −</p>`;
+    wrap.innerHTML = `<p class="pick-label">Seu palpite</p>`;
 
     const row = document.createElement('div');
     row.className = 'pick-row';
     const vals = { home: myPick ? myPick.home : 0, away: myPick ? myPick.away : 0 };
     const savedMsg = document.createElement('p');
     savedMsg.className = 'pick-saved';
-    savedMsg.textContent = myPick ? '✓ Palpite salvo' : '';
+    savedMsg.textContent = myPick ? 'Palpite salvo' : '';
 
     const mkStepper = (side) => {
       const st = document.createElement('div');
@@ -492,59 +547,70 @@
       try {
         const m = matchById(matchId);
         if (!m || matchStarted(m)) throw new Error('Esse jogo já começou — palpite fechado!');
-        // o Apps Script grava só este palpite (sem risco de apagar os outros)
         await apiPost({ action: 'savePick', userId: state.userId, matchId, home: vals.home, away: vals.away });
         state.dirty.delete(key);
-        savedMsg.textContent = '✓ Palpite salvo';
+        savedMsg.textContent = 'Palpite salvo';
         savedMsg.style.color = 'var(--teal)';
+        updateNavBadge();
       } catch (err) {
-        savedMsg.textContent = '⚠️ ' + err.message;
+        savedMsg.textContent = '⚠ ' + err.message;
         savedMsg.style.color = 'var(--red)';
         toast(err.message, true);
       }
     }, 700);
   }
 
-  function othersArea(m) {
-    const wrap = document.createElement('div');
-    if (!matchStarted(m)) return wrap; // anti-cola: só depois que a bola rola
-    const others = state.users
-      .map((u) => ({ u, pick: state.picks[`${u.id}:${m.id}`] }))
-      .filter((x) => x.pick);
-    if (!others.length) return wrap;
+  // ------------------------------------------------------------------ aba JOGOS
+  function renderJogos() {
+    const list = $('#jogos-list');
+    const nav = $('#jogos-daynav');
+    const started = state.matches.filter((m) => matchStarted(m));
 
-    const btn = document.createElement('button');
-    btn.className = 'others-toggle';
-    const listEl = document.createElement('div');
-    listEl.className = 'others-list';
+    if (!started.length) {
+      nav.innerHTML = '';
+      list.innerHTML = '<p class="empty-note">A bola ainda não rolou — o primeiro jogo é dia 11 de junho, México x África do Sul!</p>';
+      return;
+    }
 
-    const renderList = () => {
-      const open = state.expanded.has(m.id);
-      btn.textContent = open ? '▲ Esconder palpites' : `▼ Ver palpites da galera (${others.length})`;
-      listEl.hidden = !open;
-      if (open && !listEl.childElementCount) {
-        for (const { u, pick } of others) {
-          const pts = calcPts(pick, m);
-          const row = document.createElement('div');
-          row.className = 'other-pick';
-          row.innerHTML = `<span></span><span class="op-name"></span><span class="op-score">${pick.home} x ${pick.away}</span>${m.completed ? ptsBadge(pts) : ''}`;
-          row.querySelector('span').textContent = u.avatar;
-          row.querySelector('.op-name').textContent = u.name;
-          listEl.appendChild(row);
-        }
-      }
-    };
-    btn.addEventListener('click', () => {
-      state.expanded.has(m.id) ? state.expanded.delete(m.id) : state.expanded.add(m.id);
-      renderList();
+    const days = [...new Set(started.map((m) => dayOf(m.date)))].sort();
+    if (!state.selectedDayJogos || !days.includes(state.selectedDayJogos)) {
+      state.selectedDayJogos = days[days.length - 1]; // dia mais recente
+    }
+    const liveDays = new Set(started.filter((m) => m.state === 'in').map((m) => dayOf(m.date)));
+    dayNav(nav, days, state.selectedDayJogos, liveDays, (day) => {
+      state.selectedDayJogos = day;
+      renderJogos();
     });
-    renderList();
-    wrap.appendChild(btn);
-    wrap.appendChild(listEl);
-    return wrap;
+
+    list.innerHTML = '';
+    const dayMatches = started.filter((m) => dayOf(m.date) === state.selectedDayJogos);
+    let lastStage = null;
+    for (const m of dayMatches) {
+      if (m.stagePt !== lastStage) {
+        lastStage = m.stagePt;
+        const h = document.createElement('p');
+        h.className = 'stage-heading' + (m.stage === 'final' ? ' final' : '');
+        h.textContent = m.stagePt;
+        list.appendChild(h);
+      }
+      const card = matchShell(m, statusPillOf(m), centerOf(m));
+      const div = document.createElement('div');
+      div.className = 'my-pick-result';
+      const myPick = state.userId ? state.picks[pickKey(m.id)] : null;
+      if (myPick) {
+        const pts = calcPts(myPick, m);
+        div.innerHTML = `<span>Seu palpite: <b>${myPick.home} x ${myPick.away}</b></span>${
+          m.completed ? ptsBadge(pts) : '<span class="pts-badge pts-wait">aguardando fim do jogo</span>'
+        }`;
+      } else {
+        div.innerHTML = '<span class="no-pick-note">Você não deu palpite nesse jogo</span>';
+      }
+      card.appendChild(div);
+      list.appendChild(card);
+    }
   }
 
-  // ------------------------------------------------------------------ ranking
+  // ------------------------------------------------------------------ aba RANKING
   function renderLeaderboard() {
     const el = $('#leaderboard');
     el.innerHTML = '';
@@ -562,7 +628,7 @@
         <span class="lb-avatar"></span>
         <div class="lb-info">
           <p class="lb-name"></p>
-          <p class="lb-detail">🎯 ${r.exact} exatos · ✅ ${r.results} resultados · ${r.picksCount} palpites</p>
+          <p class="lb-detail">${r.exact} exatos · ${r.results} resultados · ${r.picksCount} palpites</p>
         </div>
         <div class="lb-points"><b>${r.points}</b><span>PONTOS</span></div>
       `;
@@ -572,12 +638,156 @@
     }
   }
 
+  // ------------------------------------------------------------------ aba GALERA
+  function renderGalera() {
+    $$('#galera-toggle button').forEach((b) =>
+      b.classList.toggle('active', b.dataset.mode === state.galeraMode)
+    );
+    $('#galera-jogo').hidden = state.galeraMode !== 'jogo';
+    $('#galera-pessoa').hidden = state.galeraMode !== 'pessoa';
+    if (state.galeraMode === 'jogo') renderGaleraJogo();
+    else renderGaleraPessoa();
+  }
+
+  function renderGaleraJogo() {
+    const nav = $('#galera-daynav');
+    const list = $('#galera-list');
+    const days = [...new Set(state.matches.map((m) => dayOf(m.date)))].sort();
+    if (!days.length) { list.innerHTML = ''; return; }
+    if (!state.selectedDayGalera || !days.includes(state.selectedDayGalera)) {
+      const today = dayOf(new Date().toISOString());
+      state.selectedDayGalera = days.find((d) => d >= today) || days[days.length - 1];
+    }
+    const liveDays = new Set(state.matches.filter((m) => m.state === 'in').map((m) => dayOf(m.date)));
+    dayNav(nav, days, state.selectedDayGalera, liveDays, (day) => {
+      state.selectedDayGalera = day;
+      renderGaleraJogo();
+    });
+
+    list.innerHTML = '';
+    const dayMatches = state.matches.filter((m) => dayOf(m.date) === state.selectedDayGalera);
+    for (const m of dayMatches) {
+      const card = matchShell(m, statusPillOf(m), centerOf(m));
+      const area = document.createElement('div');
+      area.className = 'galera-area';
+
+      if (!matchStarted(m)) {
+        const n = state.users.filter((u) => state.picks[`${u.id}:${m.id}`]).length;
+        area.innerHTML = `
+          <div class="locked-note">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+            <span>Palpites escondidos até a bola rolar — ${n} ${n === 1 ? 'pessoa já palpitou' : 'pessoas já palpitaram'}</span>
+          </div>`;
+      } else {
+        const rows = state.users
+          .map((u) => ({ u, pick: state.picks[`${u.id}:${m.id}`] }))
+          .filter((x) => x.pick);
+        if (!rows.length) {
+          area.innerHTML = '<p class="no-pick-note">Ninguém palpitou nesse jogo</p>';
+        } else {
+          for (const { u, pick } of rows) {
+            const pts = calcPts(pick, m);
+            const row = document.createElement('div');
+            row.className = 'other-pick';
+            row.innerHTML = `<span></span><span class="op-name"></span><span class="op-score">${pick.home} x ${pick.away}</span>${m.completed ? ptsBadge(pts) : ''}`;
+            row.querySelector('span').textContent = u.avatar;
+            row.querySelector('.op-name').textContent = u.name + (u.id === state.userId ? ' (você)' : '');
+            area.appendChild(row);
+          }
+        }
+      }
+      card.appendChild(area);
+      list.appendChild(card);
+    }
+  }
+
+  function renderGaleraPessoa() {
+    const chips = $('#galera-people');
+    const out = $('#galera-person-picks');
+    chips.innerHTML = '';
+    if (!state.users.length) { out.innerHTML = '<p class="empty-note">Ninguém entrou no bolão ainda!</p>'; return; }
+    if (!state.galeraPerson || !state.users.some((u) => u.id === state.galeraPerson)) {
+      const firstOther = state.users.find((u) => u.id !== state.userId) || state.users[0];
+      state.galeraPerson = firstOther.id;
+    }
+    for (const u of state.users) {
+      const b = document.createElement('button');
+      b.className = 'person-chip' + (u.id === state.galeraPerson ? ' active' : '');
+      b.innerHTML = `<span></span><span class="pc-name"></span>`;
+      b.querySelector('span').textContent = u.avatar;
+      b.querySelector('.pc-name').textContent = u.name;
+      b.addEventListener('click', () => {
+        state.galeraPerson = u.id;
+        renderGaleraPessoa();
+      });
+      chips.appendChild(b);
+    }
+
+    const person = state.users.find((u) => u.id === state.galeraPerson);
+    const lb = state.leaderboard.find((r) => r.id === person.id);
+    out.innerHTML = '';
+
+    const head = document.createElement('div');
+    head.className = 'person-head';
+    head.innerHTML = `
+      <span class="ph-avatar"></span>
+      <div><p class="ph-name"></p><p class="ph-stats">${lb ? `${lb.position}º lugar · ${lb.points} pontos · ${lb.exact} exatos` : ''}</p></div>`;
+    head.querySelector('.ph-avatar').textContent = person.avatar;
+    head.querySelector('.ph-name').textContent = person.name;
+    out.appendChild(head);
+
+    const theirPicks = state.matches
+      .map((m) => ({ m, pick: state.picks[`${person.id}:${m.id}`] }))
+      .filter((x) => x.pick);
+
+    const started = theirPicks.filter((x) => matchStarted(x.m));
+    const hidden = theirPicks.length - started.length;
+
+    if (!started.length) {
+      const p = document.createElement('p');
+      p.className = 'empty-note';
+      p.textContent = hidden > 0
+        ? `${hidden} ${hidden === 1 ? 'palpite guardado' : 'palpites guardados'} a sete chaves até os jogos começarem.`
+        : 'Nenhum palpite ainda.';
+      out.appendChild(p);
+      return;
+    }
+
+    for (const { m, pick } of started.slice().reverse()) {
+      const pts = calcPts(pick, m);
+      const row = document.createElement('div');
+      row.className = 'person-pick';
+      row.innerHTML = `
+        <div class="pp-match"><span class="pp-teams"></span><span class="pp-real">${m.state === 'pre' ? '' : `${m.home.score ?? 0} x ${m.away.score ?? 0}`}</span></div>
+        <div class="pp-bottom"><span class="pp-guess">Palpite: <b>${pick.home} x ${pick.away}</b></span>${m.completed ? ptsBadge(pts) : '<span class="pts-badge pts-wait">em andamento</span>'}</div>`;
+      row.querySelector('.pp-teams').textContent = `${m.home.namePt} x ${m.away.namePt}`;
+      out.appendChild(row);
+    }
+    if (hidden > 0) {
+      const p = document.createElement('p');
+      p.className = 'no-pick-note';
+      p.textContent = `+ ${hidden} ${hidden === 1 ? 'palpite escondido' : 'palpites escondidos'} de jogos futuros`;
+      out.appendChild(p);
+    }
+  }
+
+  // ------------------------------------------------------------------ badge da aba Palpitar
+  function updateNavBadge() {
+    const phase = currentPhase();
+    const n = phase ? missingPicks(phase).length : 0;
+    const badge = $('#nav-badge');
+    badge.hidden = n === 0;
+    badge.textContent = n;
+  }
+
   // ------------------------------------------------------------------ render geral + polling
   function renderAll() {
     state.leaderboard = buildLeaderboard();
-    renderDayNav();
-    renderMatches();
-    renderLeaderboard();
+    updateNavBadge();
+    if (state.tab === 'palpitar') renderPalpitar();
+    else if (state.tab === 'jogos') renderJogos();
+    else if (state.tab === 'ranking') renderLeaderboard();
+    else if (state.tab === 'galera') renderGalera();
   }
 
   async function refresh() {
@@ -586,27 +796,7 @@
     if (ok && !$('#screen-app').hidden) renderAll();
   }
 
-  // ------------------------------------------------------------------ eventos
-  $('#btn-show-add').addEventListener('click', () => {
-    const form = $('#add-user-form');
-    form.hidden = !form.hidden;
-    if (!form.hidden) $('#new-name').focus();
-  });
-  $('#btn-create-user').addEventListener('click', createUser);
-  $('#new-name').addEventListener('keydown', (e) => e.key === 'Enter' && createUser());
-  $('#btn-switch-user').addEventListener('click', () => {
-    localStorage.removeItem('bolao_user');
-    state.userId = null;
-    showUserScreen();
-  });
-  document.querySelectorAll('.nav-btn').forEach((b) =>
-    b.addEventListener('click', () => switchTab(b.dataset.tab))
-  );
-  document.addEventListener('visibilitychange', () => !document.hidden && refresh());
-
   // ------------------------------------------------------------------ curiosidades
-  // Bandeiras SVG oficiais (flagcdn.com) pelo nome do país em português.
-  // País fora da lista usa o emoji da curiosidade como reserva.
   const FLAG_ISO = {
     'México': 'mx', 'Estados Unidos': 'us', 'Canadá': 'ca',
     'Brasil': 'br', 'Argentina': 'ar', 'Uruguai': 'uy', 'Colômbia': 'co',
@@ -627,10 +817,9 @@
   function startCurios() {
     const curios = (window.CURIOSIDADES || []).slice();
     if (!curios.length) {
-      document.querySelectorAll('.curio-card').forEach((el) => (el.hidden = true));
+      $$('.curio-card').forEach((el) => (el.hidden = true));
       return;
     }
-    // embaralha (Fisher-Yates)
     for (let i = curios.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [curios[i], curios[j]] = [curios[j], curios[i]];
@@ -640,7 +829,7 @@
       const c = curios[idx % curios.length];
       idx++;
       const iso = FLAG_ISO[(c.pais || '').trim()];
-      document.querySelectorAll('.curio-card').forEach((el) => {
+      $$('.curio-card').forEach((el) => {
         const flagEl = el.querySelector('.curio-flag');
         if (iso) {
           flagEl.innerHTML = '';
@@ -656,25 +845,57 @@
       });
     };
     const cycle = () => {
-      document.querySelectorAll('.curio-card').forEach((el) => el.classList.add('fade'));
+      $$('.curio-card').forEach((el) => el.classList.add('fade'));
       setTimeout(() => {
         apply();
-        document.querySelectorAll('.curio-card').forEach((el) => el.classList.remove('fade'));
+        $$('.curio-card').forEach((el) => el.classList.remove('fade'));
       }, 450);
     };
     apply();
     setInterval(cycle, 12000);
   }
 
+  // ------------------------------------------------------------------ eventos
+  $('#btn-entry-sim').addEventListener('click', () => answerEntry(true));
+  $('#btn-entry-nao').addEventListener('click', () => answerEntry(false));
+  $('#btn-show-add').addEventListener('click', () => {
+    const form = $('#add-user-form');
+    form.hidden = !form.hidden;
+    if (!form.hidden) $('#new-name').focus();
+  });
+  $('#btn-create-user').addEventListener('click', createUser);
+  $('#new-name').addEventListener('keydown', (e) => e.key === 'Enter' && createUser());
+  $('#btn-switch-user').addEventListener('click', () => {
+    localStorage.removeItem('bolao_user');
+    state.userId = null;
+    state.pendingRoute = null;
+    showUserScreen();
+  });
+  $$('.nav-btn').forEach((b) => b.addEventListener('click', () => switchTab(b.dataset.tab)));
+  $$('#galera-toggle button').forEach((b) =>
+    b.addEventListener('click', () => {
+      state.galeraMode = b.dataset.mode;
+      renderGalera();
+    })
+  );
+  document.addEventListener('visibilitychange', () => !document.hidden && refresh());
+
   // ------------------------------------------------------------------ start
   (async () => {
     startCurios();
     const ok = await loadData();
     if (!ok) {
-      $('#match-list').innerHTML = '<p class="empty-note">Sem conexão 😢 Puxe pra atualizar.</p>';
+      $('#jogos-list').innerHTML = '<p class="empty-note">Sem conexão. Recarregue a página.</p>';
     }
-    if (me()) showApp();
-    else showUserScreen();
+    const phase = currentPhase();
+    const seen = localStorage.getItem('bolao_phase_seen');
+    if (phase && seen !== phase) {
+      showEntry(); // fase nova (ou primeira visita): pergunta de novo
+    } else if (me()) {
+      enterApp(state.tab);
+    } else {
+      showUserScreen();
+    }
     setInterval(refresh, POLL_MS);
   })();
 })();

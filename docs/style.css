@@ -381,13 +381,22 @@ body {
   padding-bottom: env(safe-area-inset-bottom);
 }
 .nav-btn {
-  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px;
-  padding: 11px 0 9px; background: none; border: none; cursor: pointer;
-  font-family: inherit; font-size: 0.78rem; font-weight: 800; color: #5b6661;
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 12px 0 9px; background: none; border: none; cursor: pointer;
+  font-family: inherit; font-size: 0.72rem; font-weight: 700; color: #5b6661;
+  letter-spacing: 0.02em;
 }
-.nav-btn .nav-icon { font-size: 1.5rem; }
+.nav-btn .nav-icon { position: relative; width: 23px; height: 23px; display: block; }
+.nav-btn .nav-icon svg { width: 100%; height: 100%; display: block; }
 .nav-btn.active { color: var(--mint); }
-.nav-btn.active .nav-icon { transform: scale(1.12); }
+.nav-btn.active .nav-icon { transform: translateY(-1px); }
+
+.nav-badge {
+  position: absolute; top: -6px; right: -10px;
+  min-width: 17px; height: 17px; padding: 0 4px;
+  background: var(--red); color: #fff; border-radius: 999px;
+  font-size: 0.62rem; font-weight: 800; line-height: 17px; text-align: center;
+}
 
 /* ===================== Toast ===================== */
 .toast {
@@ -403,3 +412,135 @@ body {
 @media (min-width: 480px) {
   .user-grid { grid-template-columns: repeat(3, 1fr); }
 }
+
+/* ===================== Tela de entrada (pergunta da fase) ===================== */
+.entry-wrap {
+  position: relative; min-height: 92dvh;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center; margin: 0 -16px; padding: 40px 26px; overflow: hidden;
+}
+.entry-bg {
+  position: absolute; inset: 0; z-index: -1;
+  background: url('assets/estadio.jpg') center 35% / cover no-repeat;
+}
+.entry-bg::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(180deg,
+      rgba(5, 5, 7, 0.88) 0%, rgba(5, 5, 7, 0.72) 50%, var(--bg) 100%);
+}
+.entry-logo {
+  width: 132px; max-width: 44vw; height: auto;
+  filter: drop-shadow(0 10px 30px rgba(167, 255, 235, 0.3));
+}
+.entry-kicker {
+  margin-top: 22px; font-size: 0.7rem; font-weight: 700;
+  letter-spacing: 0.22em; text-transform: uppercase; color: var(--muted);
+}
+.entry-question {
+  margin-top: 10px; font-size: 1.5rem; font-weight: 700; line-height: 1.25;
+  color: var(--text); max-width: 22ch;
+}
+.entry-phase {
+  margin-top: 6px; font-size: 2rem; font-weight: 800; line-height: 1.1;
+  color: var(--mint); letter-spacing: -0.01em;
+}
+.entry-phase::after {
+  content: '?'; color: var(--text);
+}
+.entry-actions {
+  margin-top: 34px; display: flex; flex-direction: column; gap: 12px;
+  width: 100%; max-width: 330px;
+}
+.btn-entry {
+  padding: 17px; font-family: inherit; font-size: 1.08rem; font-weight: 800;
+  border-radius: 16px; cursor: pointer;
+  background: rgba(19, 19, 24, 0.85); color: var(--text);
+  border: 2px solid var(--line); backdrop-filter: blur(6px);
+}
+.btn-entry.primary { background: var(--mint); color: #04241c; border-color: var(--mint); }
+.btn-entry:active { opacity: 0.85; }
+
+/* ===================== Progresso da fase (Palpitar) ===================== */
+.progress-card {
+  margin: 18px 0 4px; padding: 14px 16px;
+  background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+.progress-text { font-size: 0.84rem; font-weight: 700; color: var(--text); }
+.progress-bar {
+  margin-top: 10px; height: 8px; border-radius: 999px; background: var(--card-2);
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%; width: 0; border-radius: 999px;
+  background: linear-gradient(90deg, var(--teal), var(--mint));
+  transition: width 0.5s ease;
+}
+
+/* ===================== Cabeçalho de dia (Palpitar) ===================== */
+.day-heading {
+  font-size: 1.02rem; font-weight: 800; color: var(--text);
+  margin: 20px 4px 0; padding-bottom: 6px; border-bottom: 1px solid var(--line);
+}
+
+/* ===================== Galera ===================== */
+.seg-toggle {
+  display: flex; gap: 4px; padding: 4px; margin-bottom: 6px;
+  background: var(--card); border: 1px solid var(--line); border-radius: 999px;
+}
+.seg-toggle button {
+  flex: 1; padding: 11px; font-family: inherit; font-size: 0.92rem; font-weight: 700;
+  color: var(--muted); background: transparent; border: none; border-radius: 999px;
+  cursor: pointer;
+}
+.seg-toggle button.active { background: var(--mint); color: #04241c; }
+
+.galera-area { margin-top: 12px; display: flex; flex-direction: column; gap: 6px; }
+
+.locked-note {
+  display: flex; align-items: center; gap: 10px; justify-content: center;
+  padding: 12px; border-radius: 12px; background: var(--card-2);
+  border: 1px dashed var(--line);
+  font-size: 0.84rem; font-weight: 600; color: var(--muted); text-align: left;
+}
+.locked-note svg { width: 18px; height: 18px; flex: 0 0 auto; color: var(--gold); }
+
+.people-row {
+  display: flex; gap: 8px; overflow-x: auto; padding: 14px 2px;
+  scrollbar-width: none;
+}
+.people-row::-webkit-scrollbar { display: none; }
+.person-chip {
+  flex: 0 0 auto; display: flex; align-items: center; gap: 7px;
+  padding: 9px 14px; border-radius: 999px; cursor: pointer;
+  background: var(--card); border: 2px solid var(--line);
+  font-family: inherit; font-weight: 700; font-size: 0.9rem; color: var(--text);
+}
+.person-chip span:first-child { font-size: 1.2rem; }
+.person-chip.active { border-color: var(--mint); background: rgba(167, 255, 235, 0.1); }
+
+.person-head {
+  display: flex; align-items: center; gap: 12px;
+  padding: 16px; margin-bottom: 12px;
+  background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+.ph-avatar { font-size: 2.2rem; }
+.ph-name { font-size: 1.15rem; font-weight: 800; }
+.ph-stats { font-size: 0.78rem; font-weight: 600; color: var(--muted); margin-top: 2px; }
+
+.person-picks { display: flex; flex-direction: column; gap: 10px; }
+.person-pick {
+  padding: 13px 16px; background: var(--card); border: 1px solid var(--line);
+  border-radius: 16px;
+}
+.pp-match { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
+.pp-teams { font-size: 0.9rem; font-weight: 700; }
+.pp-real { font-size: 1rem; font-weight: 800; color: var(--mint); white-space: nowrap; }
+.pp-bottom {
+  margin-top: 8px; display: flex; justify-content: space-between; align-items: center;
+  gap: 8px; flex-wrap: wrap;
+}
+.pp-guess { font-size: 0.86rem; font-weight: 600; color: var(--muted); }
+
+.score-x { color: #3c4a45; }
