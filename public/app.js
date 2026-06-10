@@ -442,8 +442,42 @@
   );
   document.addEventListener('visibilitychange', () => !document.hidden && refresh());
 
+  // ------------------------------------------------------------------ curiosidades
+  function startCurios() {
+    const curios = (window.CURIOSIDADES || []).slice();
+    if (!curios.length) {
+      document.querySelectorAll('.curio-card').forEach((el) => (el.hidden = true));
+      return;
+    }
+    // embaralha (Fisher-Yates)
+    for (let i = curios.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [curios[i], curios[j]] = [curios[j], curios[i]];
+    }
+    let idx = 0;
+    const apply = () => {
+      const c = curios[idx % curios.length];
+      idx++;
+      document.querySelectorAll('.curio-card').forEach((el) => {
+        el.querySelector('.curio-flag').textContent = c.emoji || '⚽';
+        el.querySelector('.curio-country').textContent = c.pais || '';
+        el.querySelector('.curio-text').textContent = c.fato || '';
+      });
+    };
+    const cycle = () => {
+      document.querySelectorAll('.curio-card').forEach((el) => el.classList.add('fade'));
+      setTimeout(() => {
+        apply();
+        document.querySelectorAll('.curio-card').forEach((el) => el.classList.remove('fade'));
+      }, 450);
+    };
+    apply();
+    setInterval(cycle, 12000);
+  }
+
   // ------------------------------------------------------------------ start
   (async () => {
+    startCurios();
     await loadData();
     if (me()) showApp();
     else showUserScreen();

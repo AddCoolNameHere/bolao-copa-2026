@@ -68,6 +68,13 @@ plano com disco.
 3. Mais palpites feitos
 4. Ordem alfabética
 
+## Curiosidades
+
+O site mostra curiosidades aleatórias sobre os países da Copa, trocando a cada
+12 segundos. Pra adicionar as suas, edite **`docs/curiosidades.js`** (o formato
+está explicado dentro do arquivo — é só copiar uma linha e trocar o texto) e
+faça commit/push. A versão local usa `public/curiosidades.js`.
+
 ## Dica pros avós
 
 No celular, abra o site no Chrome/Safari e use **"Adicionar à tela de início"** —

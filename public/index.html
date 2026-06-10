@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Bolão da Copa 2026</title>
-  <meta name="theme-color" content="#0b0b0d" />
+  <meta name="theme-color" content="#050507" />
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="icon.svg" />
@@ -19,8 +19,9 @@
   <section id="screen-user" class="screen" hidden>
     <div class="brand-bar"></div>
     <header class="hero">
+      <div class="hero-bg"></div>
       <img src="assets/logo-26.png" alt="Copa do Mundo FIFA 2026" class="hero-logo" />
-      <h1 class="hero-title">BOLÃO DA FAMÍLIA</h1>
+      <h1 class="hero-title">BOLÃO <span class="mint">DA FAMÍLIA</span></h1>
       <div class="hero-badge">CANADÁ · MÉXICO · EUA &nbsp;·&nbsp; 11 JUN — 19 JUL</div>
       <p class="hero-sub">Quem é você? Toque no seu nome 👇</p>
     </header>
@@ -37,6 +38,17 @@
       <button id="btn-create-user" class="btn-primary">Pronto, vamos lá! 🎉</button>
       <p id="add-error" class="form-error" hidden></p>
     </div>
+
+    <aside class="curio-card">
+      <div class="curio-head">
+        <span class="curio-flag">⚽</span>
+        <div>
+          <p class="curio-label">💡 Você sabia?</p>
+          <p class="curio-country"></p>
+        </div>
+      </div>
+      <p class="curio-text"></p>
+    </aside>
 
     <figure class="cities-card">
       <img src="assets/host-cities.jpg" alt="Logos das 16 cidades-sede da Copa 2026" loading="lazy" />
@@ -64,6 +76,18 @@
     <!-- ABA JOGOS -->
     <main id="tab-jogos" class="tab">
       <nav id="day-nav" class="day-nav"></nav>
+
+      <aside class="curio-card slim">
+        <div class="curio-head">
+          <span class="curio-flag">⚽</span>
+          <div>
+            <p class="curio-label">💡 Você sabia?</p>
+            <p class="curio-country"></p>
+          </div>
+        </div>
+        <p class="curio-text"></p>
+      </aside>
+
       <div id="match-list" class="match-list">
         <p class="loading">Carregando os jogos… ⚽</p>
       </div>
@@ -97,6 +121,7 @@
 
   <div id="toast" class="toast" hidden></div>
 
+  <script src="curiosidades.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
