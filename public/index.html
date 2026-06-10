@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=8" />
+  <link rel="stylesheet" href="style.css?v=9" />
 </head>
 <body>
 
@@ -56,14 +56,19 @@
     </div>
 
     <aside class="curio-card">
-      <div class="curio-head">
-        <span class="curio-flag">⚽</span>
-        <div>
-          <p class="curio-label">Você sabia?</p>
-          <p class="curio-country"></p>
+      <a class="curio-add" href="criar.html" title="Criar curiosidade">＋</a>
+      <button class="curio-nav prev" aria-label="anterior">‹</button>
+      <div class="curio-body">
+        <div class="curio-head">
+          <span class="curio-flag">⚽</span>
+          <div>
+            <p class="curio-label">Você sabia?</p>
+            <p class="curio-country"></p>
+          </div>
         </div>
+        <p class="curio-text"></p>
       </div>
-      <p class="curio-text"></p>
+      <button class="curio-nav next" aria-label="próxima">›</button>
     </aside>
 
     <figure class="cities-card">
@@ -102,14 +107,19 @@
     <main id="tab-jogos" class="tab" hidden>
       <nav id="jogos-daynav" class="day-nav"></nav>
       <aside class="curio-card slim">
-        <div class="curio-head">
-          <span class="curio-flag">⚽</span>
-          <div>
-            <p class="curio-label">Você sabia?</p>
-            <p class="curio-country"></p>
+        <a class="curio-add" href="criar.html" title="Criar curiosidade">＋</a>
+        <button class="curio-nav prev" aria-label="anterior">‹</button>
+        <div class="curio-body">
+          <div class="curio-head">
+            <span class="curio-flag">⚽</span>
+            <div>
+              <p class="curio-label">Você sabia?</p>
+              <p class="curio-country"></p>
+            </div>
           </div>
+          <p class="curio-text"></p>
         </div>
-        <p class="curio-text"></p>
+        <button class="curio-nav next" aria-label="próxima">›</button>
       </aside>
       <div id="jogos-list" class="match-list">
         <p class="loading">Carregando os jogos…</p>
@@ -180,7 +190,7 @@
 
   <div id="toast" class="toast" hidden></div>
 
-  <script src="curiosidades.js?v=8"></script>
-  <script src="app.js?v=8"></script>
+  <script src="curiosidades.js?v=9"></script>
+  <script src="app.js?v=9"></script>
 </body>
 </html>

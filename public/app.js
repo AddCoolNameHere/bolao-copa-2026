@@ -154,11 +154,11 @@
   const apiReady = () => /^https:\/\/script\.google/.test(API_URL);
 
   async function fetchState() {
-    if (!apiReady()) return { users: [], picks: {} };
+    if (!apiReady()) return { users: [], picks: {}, curios: [] };
     const res = await fetch(API_URL, { cache: 'no-store' });
     if (!res.ok) throw new Error('Falha ao buscar os palpites');
     const data = await res.json();
-    return { users: data.users || [], picks: data.picks || {} };
+    return { users: data.users || [], picks: data.picks || {}, curios: data.curios || [] };
   }
 
   // POST como text/plain = requisição "simples", sem preflight (o
@@ -189,6 +189,8 @@
         if (state.picks[key]) merged[key] = state.picks[key];
       }
       state.picks = merged;
+      state.curiosRemote = remote.curios || [];
+      buildCurioDeck();
       state.leaderboard = buildLeaderboard();
       return true;
     } catch (err) {
@@ -814,45 +816,91 @@
     'Panamá': 'pa', 'Haiti': 'ht', 'Curaçao': 'cw',
   };
 
-  function startCurios() {
-    const curios = (window.CURIOSIDADES || []).slice();
-    if (!curios.length) {
+  // Cards com swipe: deslize pro lado (ou use as setas) pra passar.
+  let curioDeck = [];
+  let curioIdx = 0;
+  let curioTimer = null;
+  let curioDeckSize = -1;
+
+  function buildCurioDeck() {
+    const file = (window.CURIOSIDADES || []).map((c) => ({
+      titulo: c.pais, icone: c.emoji, texto: c.fato,
+    }));
+    const remote = state.curiosRemote || [];
+    const all = file.concat(remote);
+    if (all.length === curioDeckSize) return;
+    curioDeckSize = all.length;
+    for (let i = all.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [all[i], all[j]] = [all[j], all[i]];
+    }
+    curioDeck = all;
+  }
+
+  function showCurio(dir) {
+    if (!curioDeck.length) {
       $$('.curio-card').forEach((el) => (el.hidden = true));
       return;
     }
-    for (let i = curios.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [curios[i], curios[j]] = [curios[j], curios[i]];
-    }
-    let idx = 0;
-    const apply = () => {
-      const c = curios[idx % curios.length];
-      idx++;
-      const iso = FLAG_ISO[(c.pais || '').trim()];
-      $$('.curio-card').forEach((el) => {
-        const flagEl = el.querySelector('.curio-flag');
-        if (iso) {
-          flagEl.innerHTML = '';
-          const img = document.createElement('img');
-          img.src = `https://flagcdn.com/${iso}.svg`;
-          img.alt = c.pais;
-          flagEl.appendChild(img);
-        } else {
-          flagEl.textContent = c.emoji || '⚽';
+    const n = curioDeck.length;
+    const c = curioDeck[((curioIdx % n) + n) % n];
+    const iso = FLAG_ISO[(c.titulo || '').trim()];
+    $$('.curio-card').forEach((el) => {
+      el.hidden = false;
+      const body = el.querySelector('.curio-body');
+      body.classList.remove('anim-next', 'anim-prev');
+      void body.offsetWidth; // reinicia a animação
+      const flagEl = el.querySelector('.curio-flag');
+      if (iso) {
+        flagEl.innerHTML = '';
+        const img = document.createElement('img');
+        img.src = `https://flagcdn.com/${iso}.svg`;
+        img.alt = c.titulo;
+        flagEl.appendChild(img);
+      } else {
+        flagEl.textContent = c.icone || '💡';
+      }
+      el.querySelector('.curio-country').textContent = c.titulo || '';
+      el.querySelector('.curio-text').textContent = c.texto || '';
+      if (dir === 1) body.classList.add('anim-next');
+      else if (dir === -1) body.classList.add('anim-prev');
+    });
+  }
+
+  function curioNav(dir) {
+    curioIdx += dir;
+    showCurio(dir);
+    resetCurioTimer();
+  }
+
+  function resetCurioTimer() {
+    clearInterval(curioTimer);
+    curioTimer = setInterval(() => {
+      curioIdx++;
+      showCurio(1);
+    }, 12000);
+  }
+
+  function startCurios() {
+    buildCurioDeck();
+    showCurio(0);
+    resetCurioTimer();
+    $$('.curio-card').forEach((el) => {
+      el.querySelector('.curio-nav.prev').addEventListener('click', () => curioNav(-1));
+      el.querySelector('.curio-nav.next').addEventListener('click', () => curioNav(1));
+      let sx = 0, sy = 0;
+      el.addEventListener('touchstart', (e) => {
+        sx = e.touches[0].clientX;
+        sy = e.touches[0].clientY;
+      }, { passive: true });
+      el.addEventListener('touchend', (e) => {
+        const dx = e.changedTouches[0].clientX - sx;
+        const dy = e.changedTouches[0].clientY - sy;
+        if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+          curioNav(dx < 0 ? 1 : -1);
         }
-        el.querySelector('.curio-country').textContent = c.pais || '';
-        el.querySelector('.curio-text').textContent = c.fato || '';
-      });
-    };
-    const cycle = () => {
-      $$('.curio-card').forEach((el) => el.classList.add('fade'));
-      setTimeout(() => {
-        apply();
-        $$('.curio-card').forEach((el) => el.classList.remove('fade'));
-      }, 450);
-    };
-    apply();
-    setInterval(cycle, 12000);
+      }, { passive: true });
+    });
   }
 
   // ------------------------------------------------------------------ eventos

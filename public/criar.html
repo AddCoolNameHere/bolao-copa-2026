@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Criar curiosidade — Bolão da Copa 2026</title>
+  <meta name="theme-color" content="#050507" />
+  <link rel="icon" href="icon.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css?v=9" />
+</head>
+<body>
+  <section class="screen">
+    <div class="brand-bar"></div>
+
+    <header class="app-header">
+      <div class="app-brand">
+        <img src="assets/logo-26.png" alt="" class="brand-logo" />
+        <div class="app-title">
+          <span class="app-title-small">BOLÃO DA FAMÍLIA</span>
+          <span class="app-title-big">Criar curiosidade</span>
+        </div>
+      </div>
+      <a href="index.html" class="user-chip" style="text-decoration:none">‹ Voltar</a>
+    </header>
+
+    <div class="add-form" style="margin-top:20px">
+      <label class="form-label" for="curio-titulo">Título</label>
+      <input id="curio-titulo" type="text" maxlength="40" placeholder="Ex.: Brasil, Vovó, Nossa família…" autocomplete="off" />
+      <p class="form-hint">Se o título for um país da Copa, a bandeira oficial aparece sozinha no card.</p>
+
+      <label class="form-label">Ícone</label>
+      <div id="curio-emojis" class="emoji-grid"></div>
+
+      <label class="form-label" for="curio-texto">O que está escrito</label>
+      <textarea id="curio-texto" maxlength="300" rows="4" placeholder="Escreva a curiosidade aqui…"></textarea>
+      <p class="form-hint"><span id="char-count">0</span>/300 caracteres</p>
+
+      <button id="btn-salvar" class="btn-primary">Adicionar ao bolão</button>
+      <p id="curio-error" class="form-error" hidden></p>
+      <p id="curio-ok" class="form-ok" hidden>Curiosidade adicionada! Ela já entra no sorteio do site.</p>
+    </div>
+
+    <p class="form-label" style="margin:24px 4px 0">Prévia</p>
+    <aside class="curio-card" style="margin-top:10px">
+      <div class="curio-body">
+        <div class="curio-head">
+          <span class="curio-flag" id="prev-flag">💡</span>
+          <div>
+            <p class="curio-label">Você sabia?</p>
+            <p class="curio-country" id="prev-titulo">Título</p>
+          </div>
+        </div>
+        <p class="curio-text" id="prev-texto">Sua curiosidade vai aparecer assim no site.</p>
+      </div>
+    </aside>
+
+    <div id="lista-criadas" style="margin-top:28px"></div>
+  </section>
+
+  <div id="toast" class="toast" hidden></div>
+
+  <script>
+    (() => {
+      'use strict';
+      const $ = (s) => document.querySelector(s);
+      const API_URL = 'https://script.google.com/macros/s/AKfycbyxMdwtjlQkjrdhsG9ZZ5ULZ80B6ZwfqQ6Ku08_Dq5qoJfCOrjjw4MEpoNykTPPqAR-WA/exec';
+
+      const FLAG_ISO = {
+        'México': 'mx', 'Estados Unidos': 'us', 'Canadá': 'ca',
+        'Brasil': 'br', 'Argentina': 'ar', 'Uruguai': 'uy', 'Colômbia': 'co',
+        'Equador': 'ec', 'Paraguai': 'py',
+        'Alemanha': 'de', 'França': 'fr', 'Inglaterra': 'gb-eng', 'Espanha': 'es',
+        'Portugal': 'pt', 'Holanda': 'nl', 'Bélgica': 'be', 'Croácia': 'hr',
+        'Suíça': 'ch', 'Áustria': 'at', 'Tchéquia': 'cz', 'Escócia': 'gb-sct',
+        'Noruega': 'no', 'Suécia': 'se', 'Turquia': 'tr', 'Bósnia': 'ba',
+        'Marrocos': 'ma', 'Senegal': 'sn', 'Egito': 'eg', 'Gana': 'gh',
+        'Costa do Marfim': 'ci', 'Argélia': 'dz', 'Tunísia': 'tn',
+        'África do Sul': 'za', 'Cabo Verde': 'cv', 'RD Congo': 'cd',
+        'Japão': 'jp', 'Coreia do Sul': 'kr', 'Irã': 'ir', 'Arábia Saudita': 'sa',
+        'Catar': 'qa', 'Iraque': 'iq', 'Uzbequistão': 'uz', 'Jordânia': 'jo',
+        'Austrália': 'au', 'Nova Zelândia': 'nz',
+        'Panamá': 'pa', 'Haiti': 'ht', 'Curaçao': 'cw',
+      };
+
+      const ICONES = [
+        '💡','⚽','🏆','🥇','🎯','🥅','🧤','🏟️',
+        '🇧🇷','🦜','🔥','⭐','⚡','🍀','🎉','🌈',
+        '👵','👴','👨','👩','🧑','👦','👧','💃',
+        '😂','😎','🤯','🫶','❤️','🍕','☕','🧉',
+      ];
+
+      let icone = '💡';
+
+      const grid = $('#curio-emojis');
+      for (const e of ICONES) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.textContent = e;
+        b.classList.toggle('selected', e === icone);
+        b.addEventListener('click', () => {
+          icone = e;
+          grid.querySelectorAll('button').forEach((x) => x.classList.toggle('selected', x === b));
+          preview();
+        });
+        grid.appendChild(b);
+      }
+
+      function preview() {
+        const titulo = $('#curio-titulo').value.trim() || 'Título';
+        const texto = $('#curio-texto').value.trim() || 'Sua curiosidade vai aparecer assim no site.';
+        $('#prev-titulo').textContent = titulo;
+        $('#prev-texto').textContent = texto;
+        const flagEl = $('#prev-flag');
+        const iso = FLAG_ISO[titulo];
+        if (iso) {
+          flagEl.innerHTML = '';
+          const img = document.createElement('img');
+          img.src = `https://flagcdn.com/${iso}.svg`;
+          img.alt = titulo;
+          flagEl.appendChild(img);
+        } else {
+          flagEl.textContent = icone;
+        }
+        $('#char-count').textContent = $('#curio-texto').value.length;
+      }
+      $('#curio-titulo').addEventListener('input', preview);
+      $('#curio-texto').addEventListener('input', preview);
+
+      async function carregarCriadas() {
+        try {
+          const res = await fetch(API_URL, { cache: 'no-store' });
+          const data = await res.json();
+          const curios = data.curios || [];
+          const wrap = $('#lista-criadas');
+          wrap.innerHTML = '';
+          if (!curios.length) return;
+          const h = document.createElement('p');
+          h.className = 'form-label';
+          h.style.margin = '0 4px 10px';
+          h.textContent = `Criadas pela família (${curios.length})`;
+          wrap.appendChild(h);
+          for (const c of curios.slice().reverse()) {
+            const row = document.createElement('div');
+            row.className = 'other-pick';
+            row.style.marginBottom = '6px';
+            row.innerHTML = `<span></span><span class="op-name"></span>`;
+            row.querySelector('span').textContent = c.icone || '💡';
+            row.querySelector('.op-name').textContent = `${c.titulo} — ${c.texto}`;
+            wrap.appendChild(row);
+          }
+        } catch (e) { /* sem conexão: lista fica vazia */ }
+      }
+
+      $('#btn-salvar').addEventListener('click', async () => {
+        const titulo = $('#curio-titulo').value.trim();
+        const texto = $('#curio-texto').value.trim();
+        const errEl = $('#curio-error');
+        const okEl = $('#curio-ok');
+        errEl.hidden = true;
+        okEl.hidden = true;
+        if (!titulo || !texto) {
+          errEl.textContent = 'Preencha o título e o texto.';
+          errEl.hidden = false;
+          return;
+        }
+        const btn = $('#btn-salvar');
+        btn.disabled = true;
+        btn.textContent = 'Salvando…';
+        try {
+          const res = await fetch(API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({ action: 'addCurio', titulo, icone, texto }),
+          });
+          const data = await res.json();
+          if (data.error) throw new Error(data.error);
+          okEl.hidden = false;
+          $('#curio-titulo').value = '';
+          $('#curio-texto').value = '';
+          preview();
+          carregarCriadas();
+        } catch (err) {
+          errEl.textContent = err.message === 'Ação desconhecida.'
+            ? 'O Apps Script da planilha precisa ser atualizado (veja o google-apps-script.gs novo).'
+            : err.message;
+          errEl.hidden = false;
+        } finally {
+          btn.disabled = false;
+          btn.textContent = 'Adicionar ao bolão';
+        }
+      });
+
+      preview();
+      carregarCriadas();
+    })();
+  </script>
+</body>
+</html>

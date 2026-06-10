@@ -116,6 +116,17 @@ body {
 .add-form input::placeholder { color: #5d6a65; }
 .add-form input:focus { border-color: var(--teal); }
 
+.add-form textarea {
+  width: 100%; padding: 15px 16px; font-family: inherit; font-size: 1.05rem; font-weight: 600;
+  background: var(--card-2); border: 2px solid var(--line); border-radius: 14px;
+  outline: none; color: var(--text); resize: vertical;
+}
+.add-form textarea::placeholder { color: #5d6a65; }
+.add-form textarea:focus { border-color: var(--teal); }
+
+.form-hint { margin-top: 8px; font-size: 0.78rem; font-weight: 600; color: var(--muted); }
+.form-ok { margin-top: 12px; color: var(--teal); font-weight: 700; font-size: 0.95rem; }
+
 .emoji-grid {
   display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px;
   max-height: 292px; overflow-y: auto; padding-right: 4px;
@@ -147,16 +158,40 @@ body {
 
 /* ===================== Curiosidades ===================== */
 .curio-card {
-  position: relative; margin-top: 22px; padding: 18px;
+  position: relative; margin-top: 22px; padding: 18px 6px;
+  display: flex; align-items: center; gap: 2px;
   background: linear-gradient(140deg, #11181c, #131318 60%);
   border-radius: var(--radius); border: 1px solid var(--line);
   box-shadow: var(--shadow); overflow: hidden;
+  touch-action: pan-y; user-select: none;
 }
 .curio-card::before {
   content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px;
   background: var(--citybar);
 }
 .curio-card.slim { margin: 4px 0 16px; }
+
+.curio-body { flex: 1; min-width: 0; }
+.curio-body.anim-next { animation: curio-next 0.35s ease; }
+.curio-body.anim-prev { animation: curio-prev 0.35s ease; }
+@keyframes curio-next { from { opacity: 0; transform: translateX(42px); } }
+@keyframes curio-prev { from { opacity: 0; transform: translateX(-42px); } }
+
+.curio-nav {
+  flex: 0 0 auto; width: 32px; align-self: stretch;
+  background: none; border: none; cursor: pointer;
+  font-family: inherit; font-size: 1.7rem; font-weight: 700; color: #3c4a45;
+  border-radius: 12px;
+}
+.curio-nav:active { color: var(--mint); }
+
+.curio-add {
+  position: absolute; top: 9px; right: 12px; z-index: 2;
+  width: 24px; height: 24px; line-height: 24px; text-align: center;
+  border-radius: 50%; background: var(--card-2); border: 1px solid var(--line);
+  color: var(--muted); font-size: 0.95rem; font-weight: 700; text-decoration: none;
+}
+.curio-add:active { color: var(--mint); border-color: var(--mint); }
 
 .curio-head { display: flex; align-items: center; gap: 12px; }
 .curio-flag { font-size: 2rem; flex: 0 0 auto; line-height: 0; }
@@ -173,12 +208,6 @@ body {
 .curio-text {
   margin-top: 10px; font-size: 0.94rem; font-weight: 500; line-height: 1.5; color: #d7e2dd;
 }
-
-.curio-card .curio-inner-fade { transition: opacity 0.4s; }
-.curio-card.fade .curio-head,
-.curio-card.fade .curio-text { opacity: 0; }
-.curio-card .curio-head,
-.curio-card .curio-text { transition: opacity 0.45s ease; opacity: 1; }
 
 /* ===================== Header do app ===================== */
 .app-header {

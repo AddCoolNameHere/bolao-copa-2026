@@ -29,7 +29,12 @@ function ensureSheets_() {
     picks = ss.insertSheet('palpites');
     picks.appendRow(['chave', 'userId', 'matchId', 'casa', 'fora', 'atualizadoEm']);
   }
-  return { users: users, picks: picks };
+  let curios = ss.getSheetByName('curiosidades');
+  if (!curios) {
+    curios = ss.insertSheet('curiosidades');
+    curios.appendRow(['titulo', 'icone', 'texto', 'criadoEm']);
+  }
+  return { users: users, picks: picks, curios: curios };
 }
 
 function readState_() {
@@ -45,7 +50,12 @@ function readState_() {
     .forEach(function (r) {
       picks[String(r[0])] = { home: Number(r[3]), away: Number(r[4]), updatedAt: String(r[5]) };
     });
-  return { users: users, picks: picks };
+  const curios = s.curios.getDataRange().getValues().slice(1)
+    .filter(function (r) { return r[0] && r[2]; })
+    .map(function (r) {
+      return { titulo: String(r[0]), icone: String(r[1]), texto: String(r[2]) };
+    });
+  return { users: users, picks: picks, curios: curios };
 }
 
 function json_(obj) {
@@ -99,6 +109,16 @@ function doPost(e) {
       const vals = [key, userId, matchId, home, away, new Date().toISOString()];
       if (row > 0) s.picks.getRange(row, 1, 1, 6).setValues([vals]);
       else s.picks.appendRow(vals);
+      return json_({ ok: true });
+    }
+
+    // ---------- adicionar curiosidade ----------
+    if (body.action === 'addCurio') {
+      const titulo = String(body.titulo || '').trim().slice(0, 40);
+      const icone = String(body.icone || '💡').slice(0, 8);
+      const texto = String(body.texto || '').trim().slice(0, 300);
+      if (!titulo || !texto) return json_({ error: 'Preencha o título e o texto.' });
+      s.curios.appendRow([titulo, icone, texto, new Date().toISOString()]);
       return json_({ ok: true });
     }
 
