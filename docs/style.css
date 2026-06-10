@@ -523,6 +523,18 @@ body {
   margin: 20px 4px 0; padding-bottom: 6px; border-bottom: 1px solid var(--line);
 }
 
+.picked-details {
+  margin-top: 26px; background: var(--card); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 4px 16px 14px;
+}
+.picked-details summary {
+  padding: 13px 0 9px; cursor: pointer; list-style: none;
+  font-size: 0.92rem; font-weight: 800; color: var(--teal);
+}
+.picked-details summary::before { content: '▸ '; }
+.picked-details[open] summary::before { content: '▾ '; }
+.picked-details summary::-webkit-details-marker { display: none; }
+
 /* ===================== Galera ===================== */
 .seg-toggle {
   display: flex; gap: 4px; padding: 4px; margin-bottom: 6px;

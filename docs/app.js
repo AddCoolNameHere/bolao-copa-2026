@@ -122,6 +122,7 @@
     selectedEmoji: EMOJIS[0],
     tab: 'palpitar',
     pendingRoute: null,     // pra onde ir depois de escolher o usuário
+    showPicked: false,      // seção "já palpitados" aberta?
   };
 
   const me = () => state.users.find((u) => u.id === state.userId) || null;
@@ -484,27 +485,58 @@
       return;
     }
 
-    let lastDay = null, lastStage = null;
-    for (const m of future) {
-      const day = dayOf(m.date);
-      if (day !== lastDay) {
-        lastDay = day;
-        const h = document.createElement('h3');
-        h.className = 'day-heading';
-        h.textContent = fmtDayLong(day);
-        list.appendChild(h);
-        lastStage = null;
+    // só os que faltam ficam na lista; os já palpitados vão pra
+    // uma seção recolhida no final (dá pra revisar/editar lá)
+    const pending = future.filter((m) => !state.picks[pickKey(m.id)]);
+    const done = future.filter((m) => state.picks[pickKey(m.id)]);
+
+    const renderGroup = (container, matches) => {
+      let lastDay = null, lastStage = null;
+      for (const m of matches) {
+        const day = dayOf(m.date);
+        if (day !== lastDay) {
+          lastDay = day;
+          const h = document.createElement('h3');
+          h.className = 'day-heading';
+          h.textContent = fmtDayLong(day);
+          container.appendChild(h);
+          lastStage = null;
+        }
+        if (m.stagePt !== lastStage) {
+          lastStage = m.stagePt;
+          const s = document.createElement('p');
+          s.className = 'stage-heading' + (m.stage === 'final' ? ' final' : '');
+          s.textContent = m.stagePt;
+          container.appendChild(s);
+        }
+        const card = matchShell(m, statusPillOf(m), centerOf(m));
+        card.appendChild(pickArea(m, state.picks[pickKey(m.id)]));
+        container.appendChild(card);
       }
-      if (m.stagePt !== lastStage) {
-        lastStage = m.stagePt;
-        const s = document.createElement('p');
-        s.className = 'stage-heading' + (m.stage === 'final' ? ' final' : '');
-        s.textContent = m.stagePt;
-        list.appendChild(s);
-      }
-      const card = matchShell(m, statusPillOf(m), centerOf(m));
-      card.appendChild(pickArea(m, state.picks[pickKey(m.id)]));
-      list.appendChild(card);
+    };
+
+    if (!pending.length) {
+      const p = document.createElement('p');
+      p.className = 'empty-note';
+      p.textContent = 'Você já palpitou todos os jogos abertos. Bom descanso, craque!';
+      list.appendChild(p);
+    } else {
+      renderGroup(list, pending);
+    }
+
+    if (done.length) {
+      const det = document.createElement('details');
+      det.className = 'picked-details';
+      det.open = !!state.showPicked;
+      const sum = document.createElement('summary');
+      sum.textContent = `Já palpitados (${done.length}) — toque pra revisar`;
+      det.appendChild(sum);
+      det.addEventListener('toggle', () => (state.showPicked = det.open));
+      const inner = document.createElement('div');
+      inner.className = 'match-list';
+      renderGroup(inner, done);
+      det.appendChild(inner);
+      list.appendChild(det);
     }
   }
 
