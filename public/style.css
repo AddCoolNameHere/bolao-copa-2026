@@ -171,6 +171,17 @@ body {
 }
 .curio-card.slim { margin: 4px 0 16px; }
 
+/* easter egg: curiosidade criada pela família */
+.curio-card.family {
+  border-color: var(--gold);
+  background: linear-gradient(140deg, #1f1907, #131318 65%);
+  box-shadow: 0 0 24px rgba(216, 181, 84, 0.18);
+}
+.curio-card.family::before {
+  background: linear-gradient(90deg, var(--gold-deep), #f3dc8e, var(--gold-deep));
+}
+.curio-card.family .curio-country { color: var(--gold); }
+
 .curio-body { flex: 1; min-width: 0; }
 .curio-body.anim-next { animation: curio-next 0.35s ease; }
 .curio-body.anim-prev { animation: curio-prev 0.35s ease; }

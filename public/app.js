@@ -830,24 +830,43 @@
   };
 
   // Cards com swipe: deslize pro lado (ou use as setas) pra passar.
+  // Curiosidades criadas pela família (planilha) são easter eggs:
+  // peso maior no sorteio e visual dourado quando aparecem.
+  const FAMILY_WEIGHT = 5;
+
   let curioDeck = [];
-  let curioIdx = 0;
+  let curioHistory = [];
+  let curioPos = -1;
   let curioTimer = null;
   let curioDeckSize = -1;
 
   function buildCurioDeck() {
-    const file = (window.CURIOSIDADES || []).map((c) => ({
-      titulo: c.pais, icone: c.emoji, texto: c.fato,
+    const file = (window.CURIOSIDADES || []).map((c, i) => ({
+      key: 'f' + i, titulo: c.pais, icone: c.emoji, texto: c.fato,
+      family: false, weight: 1,
     }));
-    const remote = state.curiosRemote || [];
+    const remote = (state.curiosRemote || []).map((c, i) => ({
+      key: 'r' + i, titulo: c.titulo, icone: c.icone, texto: c.texto,
+      family: true, weight: FAMILY_WEIGHT,
+    }));
     const all = file.concat(remote);
     if (all.length === curioDeckSize) return;
     curioDeckSize = all.length;
-    for (let i = all.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [all[i], all[j]] = [all[j], all[i]];
-    }
     curioDeck = all;
+  }
+
+  // sorteio ponderado, evitando repetir as últimas vistas
+  function pickNextCurio() {
+    const recent = new Set(curioHistory.slice(-6).map((c) => c.key));
+    let pool = curioDeck.filter((c) => !recent.has(c.key));
+    if (!pool.length) pool = curioDeck;
+    const total = pool.reduce((s, c) => s + c.weight, 0);
+    let r = Math.random() * total;
+    for (const c of pool) {
+      r -= c.weight;
+      if (r <= 0) return c;
+    }
+    return pool[pool.length - 1];
   }
 
   function showCurio(dir) {
@@ -855,11 +874,12 @@
       $$('.curio-card').forEach((el) => (el.hidden = true));
       return;
     }
-    const n = curioDeck.length;
-    const c = curioDeck[((curioIdx % n) + n) % n];
+    const c = curioHistory[curioPos];
+    if (!c) return;
     const iso = FLAG_ISO[(c.titulo || '').trim()];
     $$('.curio-card').forEach((el) => {
       el.hidden = false;
+      el.classList.toggle('family', !!c.family);
       const body = el.querySelector('.curio-body');
       body.classList.remove('anim-next', 'anim-prev');
       void body.offsetWidth; // reinicia a animação
@@ -873,6 +893,7 @@
       } else {
         flagEl.textContent = c.icone || '💡';
       }
+      el.querySelector('.curio-label').textContent = c.family ? '★ Curiosidade da família' : 'Você sabia?';
       el.querySelector('.curio-country').textContent = c.titulo || '';
       el.querySelector('.curio-text').textContent = c.texto || '';
       if (dir === 1) body.classList.add('anim-next');
@@ -881,7 +902,18 @@
   }
 
   function curioNav(dir) {
-    curioIdx += dir;
+    if (!curioDeck.length) return;
+    if (dir === -1) {
+      if (curioPos <= 0) return; // não tem mais pra voltar
+      curioPos--;
+    } else {
+      if (curioPos < curioHistory.length - 1) {
+        curioPos++; // refazendo o caminho de volta
+      } else {
+        curioHistory.push(pickNextCurio());
+        curioPos++;
+      }
+    }
     showCurio(dir);
     resetCurioTimer();
   }
@@ -889,13 +921,19 @@
   function resetCurioTimer() {
     clearInterval(curioTimer);
     curioTimer = setInterval(() => {
-      curioIdx++;
+      if (!curioDeck.length) return;
+      curioHistory.push(pickNextCurio());
+      curioPos = curioHistory.length - 1;
       showCurio(1);
     }, 12000);
   }
 
   function startCurios() {
     buildCurioDeck();
+    if (curioDeck.length) {
+      curioHistory.push(pickNextCurio());
+      curioPos = 0;
+    }
     showCurio(0);
     resetCurioTimer();
     $$('.curio-card').forEach((el) => {
