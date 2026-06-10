@@ -8,7 +8,7 @@
   const $$ = (sel) => document.querySelectorAll(sel);
 
   // URL do App da Web do Google Apps Script (termina em /exec)
-  const API_URL = 'COLE_AQUI_A_URL_DO_APPS_SCRIPT';
+  const API_URL = 'https://script.google.com/macros/s/AKfycbyxMdwtjlQkjrdhsG9ZZ5ULZ80B6ZwfqQ6Ku08_Dq5qoJfCOrjjw4MEpoNykTPPqAR-WA/exec';
   const ESPN_URL =
     'https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260611-20260719&limit=400';
 
