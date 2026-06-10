@@ -832,7 +832,7 @@
   // Cards com swipe: deslize pro lado (ou use as setas) pra passar.
   // Curiosidades criadas pela família (planilha) são easter eggs:
   // peso maior no sorteio e visual dourado quando aparecem.
-  const FAMILY_WEIGHT = 5;
+  const FAMILY_WEIGHT = 2;
 
   let curioDeck = [];
   let curioHistory = [];
