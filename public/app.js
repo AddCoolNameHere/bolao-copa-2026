@@ -69,6 +69,10 @@
     'final': 'Grande Final',
   };
 
+  // Times "de mentira" do chaveamento (1º do Grupo A, Venc. Oitavas 3 etc.)
+  const isPlaceholderTeam = (name) =>
+    /^(Group [A-L] (Winner|2nd Place)|Third Place Group .+|Round of (32|16) \d+ Winner|Quarterfinal \d+ Winner|Semifinal \d+ (Winner|Loser))$/.test(name);
+
   function normalizeEvent(ev) {
     const comp = ev.competitions && ev.competitions[0];
     if (!comp) return null;
@@ -84,6 +88,9 @@
       shootout: c.shootoutScore != null ? Number(c.shootoutScore) : null,
     });
     return {
+      defined:
+        !isPlaceholderTeam(home.team.displayName) &&
+        !isPlaceholderTeam(away.team.displayName),
       id: String(ev.id),
       date: comp.startDate || ev.date,
       stage: ev.season ? ev.season.slug : 'group-stage',
@@ -133,11 +140,11 @@
   }
   const phaseLabel = (slug) => STAGE_PT[slug] || 'Copa 2026';
 
-  // jogos da fase que ainda não começaram e estão sem palpite meu
+  // jogos da fase já definidos, ainda não começados e sem palpite meu
   function missingPicks(phase) {
     if (!state.userId) return [];
     return state.matches.filter(
-      (m) => m.stage === phase && !matchStarted(m) && !state.picks[pickKey(m.id)]
+      (m) => m.stage === phase && m.defined && !matchStarted(m) && !state.picks[pickKey(m.id)]
     );
   }
 
@@ -453,12 +460,14 @@
   function renderPalpitar() {
     const list = $('#palpitar-list');
     const phase = currentPhase();
-    const future = state.matches.filter((m) => !matchStarted(m));
+    // só entram jogos com os dois times definidos — nada de palpitar
+    // em "1º do Grupo A" antes do chaveamento sair
+    const future = state.matches.filter((m) => m.defined && !matchStarted(m));
 
-    // progresso da fase
+    // progresso da fase (conta só confrontos já definidos)
     const progEl = $('#palpitar-progress');
     if (phase && state.userId) {
-      const phaseMatches = state.matches.filter((m) => m.stage === phase);
+      const phaseMatches = state.matches.filter((m) => m.stage === phase && m.defined);
       const done = phaseMatches.filter((m) => state.picks[pickKey(m.id)]).length;
       const pct = phaseMatches.length ? Math.round((done / phaseMatches.length) * 100) : 0;
       progEl.hidden = false;
@@ -471,7 +480,7 @@
 
     list.innerHTML = '';
     if (!future.length) {
-      list.innerHTML = '<p class="empty-note">Nenhum jogo aberto pra palpite agora.</p>';
+      list.innerHTML = '<p class="empty-note">Nenhum confronto definido pra palpitar agora — assim que o chaveamento sair, os jogos aparecem aqui.</p>';
       return;
     }
 
@@ -549,6 +558,7 @@
       try {
         const m = matchById(matchId);
         if (!m || matchStarted(m)) throw new Error('Esse jogo já começou — palpite fechado!');
+        if (!m.defined) throw new Error('Esse confronto ainda não está definido.');
         await apiPost({ action: 'savePick', userId: state.userId, matchId, home: vals.home, away: vals.away });
         state.dirty.delete(key);
         savedMsg.textContent = 'Palpite salvo';
@@ -675,10 +685,13 @@
 
       if (!matchStarted(m)) {
         const n = state.users.filter((u) => state.picks[`${u.id}:${m.id}`]).length;
+        const msg = !m.defined
+          ? 'Confronto ainda não definido — os palpites abrem quando o chaveamento sair'
+          : `Palpites escondidos até a bola rolar — ${n} ${n === 1 ? 'pessoa já palpitou' : 'pessoas já palpitaram'}`;
         area.innerHTML = `
           <div class="locked-note">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
-            <span>Palpites escondidos até a bola rolar — ${n} ${n === 1 ? 'pessoa já palpitou' : 'pessoas já palpitaram'}</span>
+            <span>${msg}</span>
           </div>`;
       } else {
         const rows = state.users
