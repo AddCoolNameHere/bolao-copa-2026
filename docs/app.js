@@ -1,12 +1,13 @@
 /* Bolão da Copa 2026 — versão estática (GitHub Pages)
    Jogos: API pública da ESPN (CORS liberado)
-   Palpites: JSONBlob (leitura/escrita compartilhada) */
+   Palpites: Google Apps Script + Google Sheets (ver google-apps-script.gs) */
 (() => {
   'use strict';
 
   const $ = (sel) => document.querySelector(sel);
 
-  const BLOB_URL = 'https://jsonblob.com/api/jsonBlob/019eaf0e-d97f-7596-a3c7-739644cfd9c4';
+  // URL do App da Web do Google Apps Script (termina em /exec)
+  const API_URL = 'COLE_AQUI_A_URL_DO_APPS_SCRIPT';
   const ESPN_URL =
     'https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260611-20260719&limit=400';
 
@@ -131,31 +132,40 @@
     return matches;
   }
 
-  async function fetchBlob() {
-    const res = await fetch(BLOB_URL, { cache: 'no-store' });
+  const apiReady = () => /^https:\/\/script\.google/.test(API_URL);
+
+  async function fetchState() {
+    if (!apiReady()) return { users: [], picks: {} };
+    const res = await fetch(API_URL, { cache: 'no-store' });
     if (!res.ok) throw new Error('Falha ao buscar os palpites');
     const data = await res.json();
     return { users: data.users || [], picks: data.picks || {} };
   }
 
-  async function putBlob(data) {
-    const res = await fetch(BLOB_URL, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
+  // POST como text/plain = requisição "simples", sem preflight (o
+  // Apps Script não responde OPTIONS).
+  async function apiPost(payload) {
+    if (!apiReady()) throw new Error('O bolão ainda não foi conectado à planilha.');
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload),
     });
     if (!res.ok) throw new Error('Falha ao salvar — tente de novo');
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    return data;
   }
 
   async function loadData() {
     try {
-      const [matches, blob] = await Promise.all([
+      const [matches, remote] = await Promise.all([
         fetchMatches().catch(() => state.matches.length ? state.matches : Promise.reject(new Error('jogos'))),
-        fetchBlob(),
+        fetchState(),
       ]);
       state.matches = matches;
-      state.users = blob.users;
-      const merged = { ...blob.picks };
+      state.users = remote.users;
+      const merged = { ...remote.picks };
       for (const key of state.dirty) {
         if (state.picks[key]) merged[key] = state.picks[key];
       }
@@ -271,21 +281,11 @@
     const btn = $('#btn-create-user');
     btn.disabled = true;
     try {
-      // lê a versão mais recente antes de gravar (evita sobrescrever outras pessoas)
-      const blob = await fetchBlob();
-      if (blob.users.some((u) => u.name.toLowerCase() === name.toLowerCase())) {
-        throw new Error('Já existe alguém com esse nome.');
-      }
-      const user = {
-        id: 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-        name, avatar: state.selectedEmoji, createdAt: new Date().toISOString(),
-      };
-      blob.users.push(user);
-      await putBlob(blob);
-      state.users = blob.users;
-      state.picks = { ...blob.picks, ...state.picks };
-      toast(`Bem-vindo(a), ${user.name}! 🎉`);
-      await selectUser(user.id);
+      // o Apps Script valida nome duplicado e grava na planilha
+      const data = await apiPost({ action: 'addUser', name, avatar: state.selectedEmoji });
+      state.users.push(data.user);
+      toast(`Bem-vindo(a), ${data.user.name}! 🎉`);
+      await selectUser(data.user.id);
     } catch (err) {
       errEl.textContent = err.message;
       errEl.hidden = false;
@@ -492,14 +492,11 @@
       try {
         const m = matchById(matchId);
         if (!m || matchStarted(m)) throw new Error('Esse jogo já começou — palpite fechado!');
-        // lê a versão mais recente e grava só o próprio palpite por cima
-        const blob = await fetchBlob();
-        blob.picks[key] = { home: vals.home, away: vals.away, updatedAt: new Date().toISOString() };
-        await putBlob(blob);
-        state.users = blob.users;
+        // o Apps Script grava só este palpite (sem risco de apagar os outros)
+        await apiPost({ action: 'savePick', userId: state.userId, matchId, home: vals.home, away: vals.away });
         state.dirty.delete(key);
         savedMsg.textContent = '✓ Palpite salvo';
-        savedMsg.style.color = 'var(--green)';
+        savedMsg.style.color = 'var(--teal)';
       } catch (err) {
         savedMsg.textContent = '⚠️ ' + err.message;
         savedMsg.style.color = 'var(--red)';
