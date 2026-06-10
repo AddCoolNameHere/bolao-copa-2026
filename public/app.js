@@ -4,7 +4,16 @@
 
   const $ = (sel) => document.querySelector(sel);
 
-  const EMOJIS = ['⚽','🏆','🇧🇷','🦜','👵','👴','👨','👩','🧑','👦','👧','🍀','🔥','⭐','🎉','🐶','🐱','🦁','🐢','🌻','🍕','☕','🎸','🥅'];
+  const EMOJIS = [
+    '⚽','🏆','🥇','🎯','🥅','🧤','🇧🇷','🦜',
+    '👵','👴','👨','👩','🧑','👦','👧','👶',
+    '🧓','👱','💃','🕺','🤓','😎','🤩','😜',
+    '😺','🐶','🐱','🦁','🐯','🐻','🐼','🐨',
+    '🐸','🐢','🦉','🦅','🦄','🐝','🦋','🐙',
+    '🌻','🌵','🌈','⭐','🔥','⚡','🍀','🎉',
+    '🍕','🍔','🌮','🍿','☕','🍺','🧉','🍫',
+    '🎸','🎮','🎲','🚀','🏖️','📚','🧶','🛵',
+  ];
   const POLL_MS = 60 * 1000;
 
   const state = {
@@ -443,6 +452,25 @@
   document.addEventListener('visibilitychange', () => !document.hidden && refresh());
 
   // ------------------------------------------------------------------ curiosidades
+  // Bandeiras SVG oficiais (flagcdn.com) pelo nome do país em português.
+  // País fora da lista usa o emoji da curiosidade como reserva.
+  const FLAG_ISO = {
+    'México': 'mx', 'Estados Unidos': 'us', 'Canadá': 'ca',
+    'Brasil': 'br', 'Argentina': 'ar', 'Uruguai': 'uy', 'Colômbia': 'co',
+    'Equador': 'ec', 'Paraguai': 'py',
+    'Alemanha': 'de', 'França': 'fr', 'Inglaterra': 'gb-eng', 'Espanha': 'es',
+    'Portugal': 'pt', 'Holanda': 'nl', 'Bélgica': 'be', 'Croácia': 'hr',
+    'Suíça': 'ch', 'Áustria': 'at', 'Tchéquia': 'cz', 'Escócia': 'gb-sct',
+    'Noruega': 'no', 'Suécia': 'se', 'Turquia': 'tr', 'Bósnia': 'ba',
+    'Marrocos': 'ma', 'Senegal': 'sn', 'Egito': 'eg', 'Gana': 'gh',
+    'Costa do Marfim': 'ci', 'Argélia': 'dz', 'Tunísia': 'tn',
+    'África do Sul': 'za', 'Cabo Verde': 'cv', 'RD Congo': 'cd',
+    'Japão': 'jp', 'Coreia do Sul': 'kr', 'Irã': 'ir', 'Arábia Saudita': 'sa',
+    'Catar': 'qa', 'Iraque': 'iq', 'Uzbequistão': 'uz', 'Jordânia': 'jo',
+    'Austrália': 'au', 'Nova Zelândia': 'nz',
+    'Panamá': 'pa', 'Haiti': 'ht', 'Curaçao': 'cw',
+  };
+
   function startCurios() {
     const curios = (window.CURIOSIDADES || []).slice();
     if (!curios.length) {
@@ -458,8 +486,18 @@
     const apply = () => {
       const c = curios[idx % curios.length];
       idx++;
+      const iso = FLAG_ISO[(c.pais || '').trim()];
       document.querySelectorAll('.curio-card').forEach((el) => {
-        el.querySelector('.curio-flag').textContent = c.emoji || '⚽';
+        const flagEl = el.querySelector('.curio-flag');
+        if (iso) {
+          flagEl.innerHTML = '';
+          const img = document.createElement('img');
+          img.src = `https://flagcdn.com/${iso}.svg`;
+          img.alt = c.pais;
+          flagEl.appendChild(img);
+        } else {
+          flagEl.textContent = c.emoji || '⚽';
+        }
         el.querySelector('.curio-country').textContent = c.pais || '';
         el.querySelector('.curio-text').textContent = c.fato || '';
       });

@@ -116,7 +116,10 @@ body {
 .add-form input::placeholder { color: #5d6a65; }
 .add-form input:focus { border-color: var(--teal); }
 
-.emoji-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
+.emoji-grid {
+  display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px;
+  max-height: 292px; overflow-y: auto; padding-right: 4px;
+}
 .emoji-grid button {
   font-size: 1.7rem; padding: 9px 0; background: var(--card-2); border: 2px solid transparent;
   border-radius: 12px; cursor: pointer;
@@ -156,7 +159,12 @@ body {
 .curio-card.slim { margin: 4px 0 16px; }
 
 .curio-head { display: flex; align-items: center; gap: 12px; }
-.curio-flag { font-size: 2rem; flex: 0 0 auto; }
+.curio-flag { font-size: 2rem; flex: 0 0 auto; line-height: 0; }
+.curio-flag img {
+  width: 50px; height: 36px; object-fit: cover; border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.55); display: block;
+}
 .curio-label {
   font-size: 0.66rem; font-weight: 800; letter-spacing: 0.16em;
   text-transform: uppercase; color: var(--gold);

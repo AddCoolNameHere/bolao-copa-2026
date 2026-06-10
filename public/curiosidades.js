@@ -1,9 +1,13 @@
 /* ============================================================
    CURIOSIDADES DO BOLÃO — Copa do Mundo 2026
    ============================================================
-   👉 PRA ADICIONAR MAIS: copie uma linha, troque o país, o
-      emoji da bandeira e o texto. Não esqueça a vírgula no fim!
-      Salve o arquivo e pronto — elas entram no sorteio.
+   👉 PRA ADICIONAR MAIS: copie uma linha, troque o país e o
+      texto. Não esqueça a vírgula no fim! Salve e pronto —
+      ela entra no sorteio.
+
+   A bandeira (SVG oficial) aparece sozinha pelo nome do país.
+   O emoji só é usado se o país não for reconhecido — pode até
+   inventar ("Família", "Copa" etc.) que o emoji vira o símbolo.
 
    Formato de cada linha:
    { pais: "Nome", emoji: "🏳️", fato: "Texto da curiosidade." },
