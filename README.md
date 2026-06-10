@@ -3,6 +3,17 @@
 Site de bolão da Copa do Mundo 2026, feito pra família: mobile-first, sem senha,
 com placares ao vivo, ranking e critérios de desempate.
 
+## 🌐 Site no ar
+
+**https://addcoolnamehere.github.io/bolao-copa-2026/** — manda esse link no grupo
+da família! Hospedado no GitHub Pages (pasta `docs/`, versão 100% estática):
+os jogos vêm direto da API pública da ESPN e os palpites ficam guardados num
+JSONBlob compartilhado (ver `BLOB_URL` em `docs/app.js`).
+
+⚠️ O JSONBlob apaga dados após ~30 dias sem nenhum acesso — durante a Copa,
+com gente usando todo dia, não é problema. O anti-cola nessa versão é feito no
+navegador (os palpites dos outros só aparecem na tela depois que o jogo começa).
+
 ## Como rodar
 
 ```
