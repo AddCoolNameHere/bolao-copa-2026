@@ -349,6 +349,20 @@ body {
   color: var(--teal); min-height: 1.2em;
 }
 
+.btn-confirm-pick {
+  display: block; width: 100%; margin-top: 14px; padding: 14px;
+  font-family: inherit; font-size: 0.98rem; font-weight: 800; color: #04241c;
+  background: var(--teal); border: none; border-radius: 14px; cursor: pointer;
+}
+.btn-confirm-pick:active { opacity: 0.85; }
+.btn-confirm-pick:disabled { opacity: 0.55; cursor: default; }
+
+.pick-locked-score {
+  text-align: center; font-size: 1.7rem; font-weight: 800; color: var(--text);
+  margin: 2px 0; letter-spacing: 0.02em;
+}
+.pick-locked-score .score-x { color: var(--muted); font-size: 1.05rem; margin: 0 8px; }
+
 /* Resultado do palpite (jogo encerrado/ao vivo) */
 .my-pick-result {
   margin-top: 12px; display: flex; align-items: center; justify-content: center; gap: 10px;

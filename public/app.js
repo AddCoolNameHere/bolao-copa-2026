@@ -118,7 +118,6 @@
     galeraMode: 'jogo',     // 'jogo' | 'pessoa'
     galeraPerson: null,
     dirty: new Set(),
-    saveTimers: {},
     selectedEmoji: EMOJIS[0],
     tab: 'palpitar',
     pendingRoute: null,     // pra onde ir depois de escolher o usuário
@@ -129,6 +128,11 @@
   const pickKey = (matchId) => `${state.userId}:${matchId}`;
   const matchById = (id) => state.matches.find((m) => m.id === String(id));
   const matchStarted = (m) => m.state !== 'pre' || new Date(m.date) <= new Date();
+  // já palpitei nesse jogo? (palpite confirmado é imutável)
+  const iPicked = (m) => !!(state.userId && state.picks[pickKey(m.id)]);
+  // só vejo os palpites da galera num jogo depois de palpitar nele —
+  // ou depois que ele começa, quando ninguém mais pode palpitar
+  const canSeePicks = (m) => matchStarted(m) || iPicked(m);
   const dayOf = (iso) => {
     const d = new Date(iso);
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -486,7 +490,7 @@
     }
 
     // só os que faltam ficam na lista; os já palpitados vão pra
-    // uma seção recolhida no final (dá pra revisar/editar lá)
+    // uma seção recolhida no final (só pra revisar — não dá pra editar)
     const pending = future.filter((m) => !state.picks[pickKey(m.id)]);
     const done = future.filter((m) => state.picks[pickKey(m.id)]);
 
@@ -510,7 +514,7 @@
           container.appendChild(s);
         }
         const card = matchShell(m, statusPillOf(m), centerOf(m));
-        card.appendChild(pickArea(m, state.picks[pickKey(m.id)]));
+        card.appendChild(pickArea(m));
         container.appendChild(card);
       }
     };
@@ -540,17 +544,21 @@
     }
   }
 
-  function pickArea(m, myPick) {
+  // palpite confirmado é imutável: se já palpitei, mostra travado;
+  // senão, steppers + botão "Confirmar" (sem confirmar, nada é salvo)
+  function pickArea(m) {
     const wrap = document.createElement('div');
     wrap.className = 'pick-area';
-    wrap.innerHTML = `<p class="pick-label">Seu palpite</p>`;
 
+    if (iPicked(m) && !state.dirty.has(pickKey(m.id))) {
+      renderLockedPick(wrap, state.picks[pickKey(m.id)]);
+      return wrap;
+    }
+
+    wrap.innerHTML = `<p class="pick-label">Seu palpite</p>`;
     const row = document.createElement('div');
     row.className = 'pick-row';
-    const vals = { home: myPick ? myPick.home : 0, away: myPick ? myPick.away : 0 };
-    const savedMsg = document.createElement('p');
-    savedMsg.className = 'pick-saved';
-    savedMsg.textContent = myPick ? 'Palpite salvo' : '';
+    const vals = { home: 0, away: 0 };
 
     const mkStepper = (side) => {
       const st = document.createElement('div');
@@ -561,9 +569,6 @@
       const change = (delta) => {
         vals[side] = Math.max(0, Math.min(20, vals[side] + delta));
         valEl.textContent = vals[side];
-        savedMsg.textContent = 'salvando…';
-        savedMsg.style.color = 'var(--muted)';
-        schedulePickSave(m.id, vals, savedMsg);
       };
       minus.addEventListener('click', () => change(-1));
       plus.addEventListener('click', () => change(1));
@@ -577,31 +582,52 @@
     row.appendChild(x);
     row.appendChild(mkStepper('away'));
     wrap.appendChild(row);
-    wrap.appendChild(savedMsg);
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn-confirm-pick';
+    btn.textContent = 'Confirmar palpite';
+    const note = document.createElement('p');
+    note.className = 'pick-saved';
+    note.style.color = 'var(--muted)';
+    note.textContent = 'Depois de confirmar não dá pra mudar';
+    btn.addEventListener('click', () => confirmPick(m, vals, wrap, btn, note));
+    wrap.appendChild(btn);
+    wrap.appendChild(note);
     return wrap;
   }
 
-  function schedulePickSave(matchId, vals, savedMsg) {
-    const key = pickKey(matchId);
+  function renderLockedPick(wrap, pick) {
+    wrap.classList.add('locked');
+    wrap.innerHTML =
+      `<p class="pick-label">Seu palpite</p>` +
+      `<p class="pick-locked-score">${pick.home} <span class="score-x">x</span> ${pick.away}</p>` +
+      `<p class="pick-saved">🔒 Palpite confirmado — não dá pra mudar</p>`;
+  }
+
+  async function confirmPick(m, vals, wrap, btn, note) {
+    if (matchStarted(m)) { toast('Esse jogo já começou — palpite fechado!', true); return; }
+    if (!m.defined) { toast('Esse confronto ainda não está definido.', true); return; }
+    const key = pickKey(m.id);
+    btn.disabled = true;
+    note.textContent = 'salvando…';
+    note.style.color = 'var(--muted)';
     state.picks[key] = { home: vals.home, away: vals.away };
     state.dirty.add(key);
-    clearTimeout(state.saveTimers[matchId]);
-    state.saveTimers[matchId] = setTimeout(async () => {
-      try {
-        const m = matchById(matchId);
-        if (!m || matchStarted(m)) throw new Error('Esse jogo já começou — palpite fechado!');
-        if (!m.defined) throw new Error('Esse confronto ainda não está definido.');
-        await apiPost({ action: 'savePick', userId: state.userId, matchId, home: vals.home, away: vals.away });
-        state.dirty.delete(key);
-        savedMsg.textContent = 'Palpite salvo';
-        savedMsg.style.color = 'var(--teal)';
-        updateNavBadge();
-      } catch (err) {
-        savedMsg.textContent = '⚠ ' + err.message;
-        savedMsg.style.color = 'var(--red)';
-        toast(err.message, true);
-      }
-    }, 3500); // espera você terminar de mexer no placar antes de salvar
+    try {
+      await apiPost({ action: 'savePick', userId: state.userId, matchId: m.id, home: vals.home, away: vals.away, jogo: `${m.home.namePt} x ${m.away.namePt}` });
+      state.dirty.delete(key);
+      renderLockedPick(wrap, vals);
+      state.leaderboard = buildLeaderboard();
+      updateNavBadge();
+    } catch (err) {
+      delete state.picks[key];
+      state.dirty.delete(key);
+      btn.disabled = false;
+      note.textContent = '⚠ ' + err.message;
+      note.style.color = 'var(--red)';
+      toast(err.message, true);
+    }
   }
 
   // ------------------------------------------------------------------ aba JOGOS
@@ -715,11 +741,11 @@
       const area = document.createElement('div');
       area.className = 'galera-area';
 
-      if (!matchStarted(m)) {
+      if (!canSeePicks(m)) {
         const n = state.users.filter((u) => state.picks[`${u.id}:${m.id}`]).length;
         const msg = !m.defined
           ? 'Confronto ainda não definido — os palpites abrem quando o chaveamento sair'
-          : `Palpites escondidos até a bola rolar — ${n} ${n === 1 ? 'pessoa já palpitou' : 'pessoas já palpitaram'}`;
+          : `Palpite nesse jogo pra ver os da galera — ${n} ${n === 1 ? 'pessoa já palpitou' : 'pessoas já palpitaram'}`;
         area.innerHTML = `
           <div class="locked-note">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
@@ -787,20 +813,20 @@
       .map((m) => ({ m, pick: state.picks[`${person.id}:${m.id}`] }))
       .filter((x) => x.pick);
 
-    const started = theirPicks.filter((x) => matchStarted(x.m));
-    const hidden = theirPicks.length - started.length;
+    const visible = theirPicks.filter((x) => canSeePicks(x.m));
+    const hidden = theirPicks.length - visible.length;
 
-    if (!started.length) {
+    if (!visible.length) {
       const p = document.createElement('p');
       p.className = 'empty-note';
       p.textContent = hidden > 0
-        ? `${hidden} ${hidden === 1 ? 'palpite guardado' : 'palpites guardados'} a sete chaves até os jogos começarem.`
+        ? `${hidden} ${hidden === 1 ? 'palpite trancado' : 'palpites trancados'} — palpite nos mesmos jogos pra ver.`
         : 'Nenhum palpite ainda.';
       out.appendChild(p);
       return;
     }
 
-    for (const { m, pick } of started.slice().reverse()) {
+    for (const { m, pick } of visible.slice().reverse()) {
       const pts = calcPts(pick, m);
       const row = document.createElement('div');
       row.className = 'person-pick';
@@ -813,7 +839,7 @@
     if (hidden > 0) {
       const p = document.createElement('p');
       p.className = 'no-pick-note';
-      p.textContent = `+ ${hidden} ${hidden === 1 ? 'palpite escondido' : 'palpites escondidos'} de jogos futuros`;
+      p.textContent = `+ ${hidden} ${hidden === 1 ? 'palpite escondido' : 'palpites escondidos'} — palpite nos mesmos jogos pra ver`;
       out.appendChild(p);
     }
   }
