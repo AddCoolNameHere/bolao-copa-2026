@@ -118,6 +118,7 @@
     galeraMode: 'jogo',     // 'jogo' | 'pessoa'
     galeraPerson: null,
     dirty: new Set(),
+    expanded: new Set(),    // jogos com a galera aberta (aba Jogos)
     selectedEmoji: EMOJIS[0],
     tab: 'palpitar',
     pendingRoute: null,     // pra onde ir depois de escolher o usuário
@@ -676,8 +677,54 @@
         div.innerHTML = '<span class="no-pick-note">Você não deu palpite nesse jogo</span>';
       }
       card.appendChild(div);
+      card.appendChild(othersArea(m));
       list.appendChild(card);
     }
+  }
+
+  // colapsável com os palpites da galera + pontos (aba Jogos).
+  // como o jogo já começou, todo mundo pode ver — sem restrição
+  function othersArea(m) {
+    const wrap = document.createElement('div');
+    const others = state.users
+      .map((u) => ({ u, pick: state.picks[`${u.id}:${m.id}`] }))
+      .filter((x) => x.pick);
+    if (!others.length) return wrap;
+    if (m.completed) others.sort((a, b) => calcPts(b.pick, m) - calcPts(a.pick, m));
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'others-toggle';
+    const listEl = document.createElement('div');
+    listEl.className = 'others-list';
+
+    const renderList = () => {
+      const open = state.expanded.has(m.id);
+      btn.textContent = open
+        ? '▲ Esconder palpites da galera'
+        : `▼ Ver palpites da galera (${others.length})`;
+      listEl.hidden = !open;
+      if (open && !listEl.childElementCount) {
+        for (const { u, pick } of others) {
+          const pts = calcPts(pick, m);
+          const row = document.createElement('div');
+          row.className = 'other-pick';
+          row.innerHTML = `<span></span><span class="op-name"></span><span class="op-score">${pick.home} x ${pick.away}</span>${m.completed ? ptsBadge(pts) : ''}`;
+          row.querySelector('span').textContent = u.avatar;
+          row.querySelector('.op-name').textContent = u.name + (u.id === state.userId ? ' (você)' : '');
+          listEl.appendChild(row);
+        }
+      }
+    };
+    btn.addEventListener('click', () => {
+      if (state.expanded.has(m.id)) state.expanded.delete(m.id);
+      else state.expanded.add(m.id);
+      renderList();
+    });
+    renderList();
+    wrap.appendChild(btn);
+    wrap.appendChild(listEl);
+    return wrap;
   }
 
   // ------------------------------------------------------------------ aba RANKING
