@@ -635,26 +635,34 @@
   function renderJogos() {
     const list = $('#jogos-list');
     const nav = $('#jogos-daynav');
-    const started = state.matches.filter((m) => matchStarted(m));
+    // jogos que já começaram + os que vêm pela frente (até 2 dias na frente)
+    const today = dayOf(new Date().toISOString());
+    const limit = new Date();
+    limit.setDate(limit.getDate() + 2);
+    const limitDay = dayOf(limit.toISOString());
+    const shown = state.matches.filter((m) => matchStarted(m) || dayOf(m.date) <= limitDay);
 
-    if (!started.length) {
+    if (!shown.length) {
       nav.innerHTML = '';
       list.innerHTML = '<p class="empty-note">A bola ainda não rolou — o primeiro jogo é dia 11 de junho, México x África do Sul!</p>';
       return;
     }
 
-    const days = [...new Set(started.map((m) => dayOf(m.date)))].sort();
+    const days = [...new Set(shown.map((m) => dayOf(m.date)))].sort();
     if (!state.selectedDayJogos || !days.includes(state.selectedDayJogos)) {
-      state.selectedDayJogos = days[days.length - 1]; // dia mais recente
+      // abre no dia de hoje, se tiver jogo; senão no dia com jogo mais próximo
+      state.selectedDayJogos = days.includes(today)
+        ? today
+        : days.filter((d) => d <= today).pop() || days[0];
     }
-    const liveDays = new Set(started.filter((m) => m.state === 'in').map((m) => dayOf(m.date)));
+    const liveDays = new Set(shown.filter((m) => m.state === 'in').map((m) => dayOf(m.date)));
     dayNav(nav, days, state.selectedDayJogos, liveDays, (day) => {
       state.selectedDayJogos = day;
       renderJogos();
     });
 
     list.innerHTML = '';
-    const dayMatches = started.filter((m) => dayOf(m.date) === state.selectedDayJogos);
+    const dayMatches = shown.filter((m) => dayOf(m.date) === state.selectedDayJogos);
     let lastStage = null;
     for (const m of dayMatches) {
       if (m.stagePt !== lastStage) {
@@ -668,13 +676,17 @@
       const div = document.createElement('div');
       div.className = 'my-pick-result';
       const myPick = state.userId ? state.picks[pickKey(m.id)] : null;
+      const started = matchStarted(m);
       if (myPick) {
         const pts = calcPts(myPick, m);
-        div.innerHTML = `<span>Seu palpite: <b>${myPick.home} x ${myPick.away}</b></span>${
-          m.completed ? ptsBadge(pts) : '<span class="pts-badge pts-wait">aguardando fim do jogo</span>'
-        }`;
+        const badge = m.completed
+          ? ptsBadge(pts)
+          : `<span class="pts-badge pts-wait">${started ? 'aguardando fim do jogo' : 'palpite confirmado'}</span>`;
+        div.innerHTML = `<span>Seu palpite: <b>${myPick.home} x ${myPick.away}</b></span>${badge}`;
       } else {
-        div.innerHTML = '<span class="no-pick-note">Você não deu palpite nesse jogo</span>';
+        div.innerHTML = started
+          ? '<span class="no-pick-note">Você não deu palpite nesse jogo</span>'
+          : '<span class="no-pick-note">Você ainda não palpitou — dá tempo, é só ir na aba Palpitar</span>';
       }
       card.appendChild(div);
       card.appendChild(othersArea(m));
@@ -683,9 +695,25 @@
   }
 
   // colapsável com os palpites da galera + pontos (aba Jogos).
-  // como o jogo já começou, todo mundo pode ver — sem restrição
+  // jogo que ainda não começou e que eu não palpitei fica trancado —
+  // mesma regra das outras abas, pra não vazar palpite antes da hora
   function othersArea(m) {
     const wrap = document.createElement('div');
+
+    if (!canSeePicks(m)) {
+      const n = state.users.filter((u) => state.picks[`${u.id}:${m.id}`]).length;
+      const msg = !m.defined
+        ? 'Confronto ainda não definido — os palpites abrem quando o chaveamento sair'
+        : `Palpite nesse jogo pra ver os da galera — ${n} ${n === 1 ? 'pessoa já palpitou' : 'pessoas já palpitaram'}`;
+      const note = document.createElement('div');
+      note.className = 'locked-note';
+      note.innerHTML = `
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+        <span>${msg}</span>`;
+      wrap.appendChild(note);
+      return wrap;
+    }
+
     const others = state.users
       .map((u) => ({ u, pick: state.picks[`${u.id}:${m.id}`] }))
       .filter((x) => x.pick);
