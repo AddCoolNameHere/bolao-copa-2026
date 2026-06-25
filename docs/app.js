@@ -129,11 +129,9 @@
   const pickKey = (matchId) => `${state.userId}:${matchId}`;
   const matchById = (id) => state.matches.find((m) => m.id === String(id));
   const matchStarted = (m) => m.state !== 'pre' || new Date(m.date) <= new Date();
-  // já palpitei nesse jogo? (palpite confirmado é imutável)
-  const iPicked = (m) => !!(state.userId && state.picks[pickKey(m.id)]);
-  // só vejo os palpites da galera num jogo depois de palpitar nele —
-  // ou depois que ele começa, quando ninguém mais pode palpitar
-  const canSeePicks = (m) => matchStarted(m) || iPicked(m);
+  // os palpites da galera num jogo só aparecem depois que ele começa,
+  // quando ninguém mais pode palpitar nem mudar nada
+  const canSeePicks = (m) => matchStarted(m);
   const dayOf = (iso) => {
     const d = new Date(iso);
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -382,7 +380,7 @@
 
   function switchTab(tab) {
     state.tab = tab;
-    ['palpitar', 'jogos', 'ranking', 'galera'].forEach((t) => {
+    ['palpitar', 'jogos', 'chave', 'ranking', 'galera'].forEach((t) => {
       $(`#tab-${t}`).hidden = t !== tab;
     });
     $$('.nav-btn').forEach((b) => b.classList.toggle('active', b.dataset.tab === tab));
@@ -491,7 +489,7 @@
     }
 
     // só os que faltam ficam na lista; os já palpitados vão pra
-    // uma seção recolhida no final (só pra revisar — não dá pra editar)
+    // uma seção recolhida no final (dá pra revisar e mudar até o jogo começar)
     const pending = future.filter((m) => !state.picks[pickKey(m.id)]);
     const done = future.filter((m) => state.picks[pickKey(m.id)]);
 
@@ -534,7 +532,7 @@
       det.className = 'picked-details';
       det.open = !!state.showPicked;
       const sum = document.createElement('summary');
-      sum.textContent = `Já palpitados (${done.length}) — toque pra revisar`;
+      sum.textContent = `Já palpitados (${done.length}) — toque pra revisar ou mudar`;
       det.appendChild(sum);
       det.addEventListener('toggle', () => (state.showPicked = det.open));
       const inner = document.createElement('div');
@@ -545,21 +543,22 @@
     }
   }
 
-  // palpite confirmado é imutável: se já palpitei, mostra travado;
-  // senão, steppers + botão "Confirmar" (sem confirmar, nada é salvo)
+  // palpite é editável até o jogo começar: steppers pré-preenchidos com
+  // o palpite atual (se houver). quando a bola rola, trava de vez.
   function pickArea(m) {
     const wrap = document.createElement('div');
     wrap.className = 'pick-area';
+    const existing = state.picks[pickKey(m.id)];
 
-    if (iPicked(m) && !state.dirty.has(pickKey(m.id))) {
-      renderLockedPick(wrap, state.picks[pickKey(m.id)]);
+    if (matchStarted(m)) {
+      if (existing) renderLockedPick(wrap, existing);
       return wrap;
     }
 
     wrap.innerHTML = `<p class="pick-label">Seu palpite</p>`;
     const row = document.createElement('div');
     row.className = 'pick-row';
-    const vals = { home: 0, away: 0 };
+    const vals = { home: existing ? existing.home : 0, away: existing ? existing.away : 0 };
 
     const mkStepper = (side) => {
       const st = document.createElement('div');
@@ -587,11 +586,11 @@
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'btn-confirm-pick';
-    btn.textContent = 'Confirmar palpite';
+    btn.textContent = existing ? 'Atualizar palpite' : 'Confirmar palpite';
     const note = document.createElement('p');
     note.className = 'pick-saved';
     note.style.color = 'var(--muted)';
-    note.textContent = 'Depois de confirmar não dá pra mudar';
+    note.textContent = existing ? 'Salvo — dá pra mudar até o jogo começar' : 'Dá pra mudar até o jogo começar';
     btn.addEventListener('click', () => confirmPick(m, vals, wrap, btn, note));
     wrap.appendChild(btn);
     wrap.appendChild(note);
@@ -603,13 +602,14 @@
     wrap.innerHTML =
       `<p class="pick-label">Seu palpite</p>` +
       `<p class="pick-locked-score">${pick.home} <span class="score-x">x</span> ${pick.away}</p>` +
-      `<p class="pick-saved">🔒 Palpite confirmado — não dá pra mudar</p>`;
+      `<p class="pick-saved">🔒 Jogo começou — palpite travado</p>`;
   }
 
   async function confirmPick(m, vals, wrap, btn, note) {
     if (matchStarted(m)) { toast('Esse jogo já começou — palpite fechado!', true); return; }
     if (!m.defined) { toast('Esse confronto ainda não está definido.', true); return; }
     const key = pickKey(m.id);
+    const prev = state.picks[key];
     btn.disabled = true;
     note.textContent = 'salvando…';
     note.style.color = 'var(--muted)';
@@ -618,11 +618,14 @@
     try {
       await apiPost({ action: 'savePick', userId: state.userId, matchId: m.id, home: vals.home, away: vals.away, jogo: `${m.home.namePt} x ${m.away.namePt}` });
       state.dirty.delete(key);
-      renderLockedPick(wrap, vals);
+      btn.disabled = false;
+      btn.textContent = 'Atualizar palpite';
+      note.textContent = '✓ Palpite salvo — dá pra mudar até o jogo começar';
+      note.style.color = 'var(--teal)';
       state.leaderboard = buildLeaderboard();
       updateNavBadge();
     } catch (err) {
-      delete state.picks[key];
+      if (prev) state.picks[key] = prev; else delete state.picks[key];
       state.dirty.delete(key);
       btn.disabled = false;
       note.textContent = '⚠ ' + err.message;
@@ -919,6 +922,95 @@
     }
   }
 
+  // ------------------------------------------------------------------ aba CHAVE (chaveamento)
+  function bracketWhen(iso) {
+    const d = new Date(iso);
+    return `${d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })} · ${fmtTime(iso)}`;
+  }
+
+  function bracketCard(m) {
+    const card = document.createElement('div');
+    card.className = 'bk-match' + (m.state === 'in' ? ' live' : '') + (m.stage === 'final' ? ' final' : '');
+    // vencedor: pelo placar normal e, se empatou, pelos pênaltis
+    let winHome = false, winAway = false;
+    if (m.completed && m.home.score != null && m.away.score != null) {
+      if (m.home.score > m.away.score) winHome = true;
+      else if (m.away.score > m.home.score) winAway = true;
+      else if (m.home.shootout != null && m.away.shootout != null) {
+        winHome = m.home.shootout > m.away.shootout;
+        winAway = m.away.shootout > m.home.shootout;
+      }
+    }
+    const teamLine = (t, win) => {
+      const flag = t.logo
+        ? `<img src="${t.logo}" alt="" loading="lazy" />`
+        : `<span class="bk-flag-fallback">?</span>`;
+      const score = m.state === 'pre'
+        ? ''
+        : `<span class="bk-score">${t.score ?? 0}${t.shootout != null ? ` <small>(${t.shootout})</small>` : ''}</span>`;
+      return `<div class="bk-team${win ? ' win' : ''}">${flag}<span class="bk-name"></span>${score}</div>`;
+    };
+    card.innerHTML = teamLine(m.home, winHome) + teamLine(m.away, winAway) + `<div class="bk-when"></div>`;
+    const names = card.querySelectorAll('.bk-name');
+    names[0].textContent = m.home.namePt;
+    names[1].textContent = m.away.namePt;
+    const when = card.querySelector('.bk-when');
+    if (m.state === 'in') when.innerHTML = '<span class="bk-live">● AO VIVO</span>';
+    else if (m.completed) when.textContent = 'Encerrado';
+    else when.textContent = bracketWhen(m.date);
+    return card;
+  }
+
+  // colunas do mata-mata, dos 16 avos até a final (3º lugar junto da final)
+  const KO_COLS = [
+    { slug: 'round-of-32', label: '16 avos' },
+    { slug: 'round-of-16', label: 'Oitavas' },
+    { slug: 'quarterfinals', label: 'Quartas' },
+    { slug: 'semifinals', label: 'Semis' },
+    { slug: 'final', label: 'Final', extra: '3rd-place-match' },
+  ];
+
+  function renderChave() {
+    const root = $('#bracket');
+    root.innerHTML = '';
+    const has = (slug) => state.matches.some((m) => m.stage === slug);
+    const any = KO_COLS.some((c) => has(c.slug) || (c.extra && has(c.extra)));
+    if (!any) {
+      root.innerHTML = '<p class="empty-note">O chaveamento aparece aqui assim que a fase de grupos acabar e os confrontos do mata-mata saírem.</p>';
+      return;
+    }
+    for (const col of KO_COLS) {
+      const colEl = document.createElement('div');
+      colEl.className = 'bracket-col' + (col.slug === 'final' ? ' final' : '');
+      const h = document.createElement('h3');
+      h.className = 'bracket-col-title' + (col.slug === 'final' ? ' final' : '');
+      h.textContent = col.label;
+      colEl.appendChild(h);
+
+      const matches = state.matches.filter((m) => m.stage === col.slug);
+      if (!matches.length) {
+        const ph = document.createElement('p');
+        ph.className = 'bracket-empty';
+        ph.textContent = 'a definir';
+        colEl.appendChild(ph);
+      } else {
+        for (const m of matches) colEl.appendChild(bracketCard(m));
+      }
+
+      if (col.extra) {
+        const extras = state.matches.filter((m) => m.stage === col.extra);
+        if (extras.length) {
+          const lbl = document.createElement('p');
+          lbl.className = 'bracket-sub';
+          lbl.textContent = '3º lugar';
+          colEl.appendChild(lbl);
+          for (const m of extras) colEl.appendChild(bracketCard(m));
+        }
+      }
+      root.appendChild(colEl);
+    }
+  }
+
   // ------------------------------------------------------------------ badge da aba Palpitar
   function updateNavBadge() {
     const phase = currentPhase();
@@ -934,6 +1026,7 @@
     updateNavBadge();
     if (state.tab === 'palpitar') renderPalpitar();
     else if (state.tab === 'jogos') renderJogos();
+    else if (state.tab === 'chave') renderChave();
     else if (state.tab === 'ranking') renderLeaderboard();
     else if (state.tab === 'galera') renderGalera();
   }

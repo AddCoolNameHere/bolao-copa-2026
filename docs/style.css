@@ -610,3 +610,62 @@ body {
 .pp-guess { font-size: 0.86rem; font-weight: 600; color: var(--muted); }
 
 .score-x { color: #3c4a45; }
+
+/* ===================== Chaveamento ===================== */
+.bracket-hint { color: var(--muted); font-weight: 600; font-size: 0.82rem; margin: 0 4px 14px; }
+
+.bracket {
+  display: flex; gap: 14px; overflow-x: auto; padding: 2px 2px 20px;
+  scrollbar-width: none; -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x proximity;
+}
+.bracket::-webkit-scrollbar { display: none; }
+
+.bracket-col {
+  flex: 0 0 auto; width: 172px;
+  display: flex; flex-direction: column; gap: 10px; scroll-snap-align: start;
+}
+.bracket-col-title {
+  font-size: 0.72rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--teal); padding: 0 2px 2px;
+}
+.bracket-col-title.final { color: var(--gold); }
+.bracket-sub {
+  font-size: 0.64rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--muted); margin-top: 8px; padding: 0 2px;
+}
+.bracket-empty {
+  color: var(--muted); font-weight: 600; font-size: 0.8rem; padding: 12px 6px; text-align: center;
+  border: 1px dashed var(--line); border-radius: 12px;
+}
+
+.bk-match {
+  background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+  padding: 9px 10px; box-shadow: var(--shadow);
+  display: flex; flex-direction: column; gap: 7px;
+}
+.bk-match.live { border-color: var(--red); box-shadow: 0 0 16px rgba(255, 70, 85, 0.16); }
+.bk-match.final {
+  border-color: var(--gold);
+  background: linear-gradient(160deg, #221b08, var(--card) 60%);
+}
+
+.bk-team { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.bk-team img, .bk-flag-fallback {
+  width: 24px; height: 24px; border-radius: 50%; object-fit: cover; flex: 0 0 auto; background: #fff;
+}
+.bk-flag-fallback {
+  display: flex; align-items: center; justify-content: center;
+  background: var(--card-2); border: 1px dashed #3a4a44; font-size: 0.78rem; color: var(--muted);
+}
+.bk-name { flex: 1; min-width: 0; font-size: 0.8rem; font-weight: 700; line-height: 1.15; color: var(--text); }
+.bk-team.win .bk-name { color: var(--mint); }
+.bk-score { flex: 0 0 auto; font-size: 0.92rem; font-weight: 800; color: var(--text); }
+.bk-team.win .bk-score { color: var(--mint); }
+.bk-score small { font-size: 0.7rem; font-weight: 700; color: var(--muted); }
+
+.bk-when {
+  font-size: 0.66rem; font-weight: 700; color: var(--muted); text-align: center;
+  border-top: 1px solid var(--line); padding-top: 6px;
+}
+.bk-live { color: var(--red); }

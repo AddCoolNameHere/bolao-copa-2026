@@ -131,8 +131,15 @@ function doPost(e) {
       const key = userId + ':' + matchId;
       const data = s.picks.getDataRange().getValues();
       for (let i = 1; i < data.length; i++) {
-        // palpite confirmado é imutável: já existe → não sobrescreve
-        if (String(data[i][0]) === key) return json_({ ok: true, locked: true });
+        // palpite editável: já existe → atualiza o placar (até o jogo começar,
+        // o que o app já garante; aqui a planilha só registra o último valor)
+        if (String(data[i][0]) === key) {
+          var row = i + 1;
+          s.picks.getRange(row, 4, 1, 2).setValues([[home, away]]);   // casa, fora
+          s.picks.getRange(row, 6).setValue(new Date().toISOString()); // atualizadoEm
+          s.picks.getRange(row, 7, 1, 2).setValues([[nome, jogo]]);    // nome, jogo
+          return json_({ ok: true, updated: true });
+        }
       }
       const vals = [key, userId, matchId, home, away, new Date().toISOString(), nome, jogo];
       s.picks.appendRow(vals);
