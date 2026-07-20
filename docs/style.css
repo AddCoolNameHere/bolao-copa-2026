@@ -733,3 +733,6 @@ html.champ-open body { overflow: hidden; }
 .champ-replay-txt { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .champ-replay-txt b { font-size: 0.86rem; font-weight: 800; }
 .champ-replay-txt i { font-size: 0.72rem; font-style: normal; font-weight: 700; color: var(--gold); }
+
+/* Copa encerrada: sem jogos por vir, a aba Palpitar sai da navegação */
+body.copa-encerrada .nav-btn[data-tab="palpitar"] { display: none; }

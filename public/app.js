@@ -142,6 +142,18 @@
     const m = state.matches.find((x) => !x.completed);
     return m ? m.stage : null;
   }
+
+  // Sem jogo pendente = Copa encerrada. O app vira retrospectiva: some a aba
+  // Palpitar (não há mais o que palpitar) e a entrada passa a ser o Ranking.
+  // Jogos, Chave e Galera continuam ali pra revisitar a Copa inteira.
+  const copaEncerrada = () => !currentPhase();
+
+  function aplicarModoEncerrado() {
+    const fim = copaEncerrada();
+    document.body.classList.toggle('copa-encerrada', fim);
+    if (fim && state.tab === 'palpitar') state.tab = 'ranking';
+    return fim;
+  }
   const phaseLabel = (slug) => STAGE_PT[slug] || 'Copa 2026';
 
   // jogos da fase já definidos, ainda não começados e sem palpite meu
@@ -287,7 +299,7 @@
   }
 
   function routeAfterUser() {
-    const route = state.pendingRoute || 'palpitar';
+    const route = state.pendingRoute || (copaEncerrada() ? 'ranking' : 'palpitar');
     state.pendingRoute = null;
     if (route === 'verificar') {
       const phase = currentPhase();
@@ -379,6 +391,7 @@
   }
 
   function switchTab(tab) {
+    if (tab === 'palpitar' && copaEncerrada()) tab = 'ranking';
     state.tab = tab;
     ['palpitar', 'jogos', 'chave', 'ranking', 'galera'].forEach((t) => {
       $(`#tab-${t}`).hidden = t !== tab;
@@ -1034,7 +1047,12 @@
   async function refresh() {
     if (document.hidden) return;
     const ok = await loadData();
-    if (ok && !$('#screen-app').hidden) renderAll();
+    if (!ok || $('#screen-app').hidden) return;
+    const antes = state.tab;
+    aplicarModoEncerrado();
+    // se a Copa acabou de encerrar com o app aberto, tira a pessoa do Palpitar
+    if (state.tab !== antes) switchTab(state.tab);
+    else renderAll();
   }
 
   // ------------------------------------------------------------------ curiosidades
@@ -1235,6 +1253,7 @@
     if (!ok) {
       $('#jogos-list').innerHTML = '<p class="empty-note">Sem conexão. Recarregue a página.</p>';
     }
+    aplicarModoEncerrado();
     const phase = currentPhase();
     const seen = localStorage.getItem('bolao_phase_seen');
     if (phase && seen !== phase) {
