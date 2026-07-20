@@ -1180,6 +1180,29 @@
     });
   }
 
+  // ------------------------------------------------------- splash do campeão
+  // O <html> já nasce com .champ-open (script inline no index.html) para o
+  // pôster pintar junto com a página, sem esperar o loadData().
+  const root = document.documentElement;
+
+  function closeChamp() {
+    const el = $('#champ-splash');
+    if (!root.classList.contains('champ-open')) return;
+    try { localStorage.setItem('bolao_campeao_2026', '1'); } catch (e) {}
+    el.classList.add('closing');
+    setTimeout(() => {
+      root.classList.remove('champ-open');
+      el.classList.remove('closing');
+    }, 240);
+  }
+
+  $('#btn-champ-close').addEventListener('click', closeChamp);
+  $('#btn-champ-open').addEventListener('click', () => root.classList.add('champ-open'));
+  $('#champ-splash').addEventListener('click', (e) => {
+    if (e.target.id === 'champ-splash') closeChamp(); // clique fora do pôster
+  });
+  document.addEventListener('keydown', (e) => e.key === 'Escape' && closeChamp());
+
   // ------------------------------------------------------------------ eventos
   $('#btn-entry-sim').addEventListener('click', () => answerEntry(true));
   $('#btn-entry-nao').addEventListener('click', () => answerEntry(false));

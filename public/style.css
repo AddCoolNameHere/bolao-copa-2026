@@ -669,3 +669,67 @@ body {
   border-top: 1px solid var(--line); padding-top: 6px;
 }
 .bk-live { color: var(--red); }
+
+/* ===================== Splash do campeão (Copa 2026) ===================== */
+.champ-splash { display: none; }
+
+html.champ-open .champ-splash {
+  display: flex; position: fixed; inset: 0; z-index: 200;
+  align-items: center; justify-content: center;
+  padding: max(14px, env(safe-area-inset-top)) 14px max(14px, env(safe-area-inset-bottom));
+  background: radial-gradient(80% 60% at 50% 40%, rgba(18, 10, 48, 0.86), rgba(3, 3, 8, 0.95));
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  animation: champ-in 260ms ease-out both;
+}
+html.champ-open body { overflow: hidden; }
+
+.champ-inner {
+  display: flex; flex-direction: column; align-items: center; gap: 16px;
+  max-height: 100%; width: 100%; max-width: 460px;
+}
+
+.champ-poster {
+  display: block; width: auto; max-width: 100%; min-height: 0; flex: 1 1 auto;
+  object-fit: contain; border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.7), 0 0 44px rgba(216, 181, 84, 0.22);
+  animation: champ-pop 420ms cubic-bezier(0.2, 0.9, 0.3, 1.2) both 60ms;
+}
+
+.btn-champ-close {
+  flex: 0 0 auto; font-family: inherit; font-size: 0.98rem; font-weight: 800;
+  color: #08110e; background: linear-gradient(180deg, var(--mint), var(--teal));
+  border: 0; border-radius: 999px; padding: 13px 30px; cursor: pointer;
+  box-shadow: 0 10px 26px rgba(24, 211, 168, 0.34);
+  animation: champ-rise 380ms ease-out both 300ms;
+}
+.btn-champ-close:active { transform: translateY(1px); }
+
+.champ-splash.closing { animation: champ-out 240ms ease-in both; }
+
+@keyframes champ-in   { from { opacity: 0; } to { opacity: 1; } }
+@keyframes champ-out  { from { opacity: 1; } to { opacity: 0; } }
+@keyframes champ-pop  { from { opacity: 0; transform: scale(0.9) translateY(16px); }
+                        to   { opacity: 1; transform: none; } }
+@keyframes champ-rise { from { opacity: 0; transform: translateY(10px); }
+                        to   { opacity: 1; transform: none; } }
+
+@media (prefers-reduced-motion: reduce) {
+  html.champ-open .champ-splash, .champ-poster, .btn-champ-close, .champ-splash.closing {
+    animation: none;
+  }
+}
+
+/* botão de rever, na aba Classificação */
+.champ-replay {
+  display: flex; align-items: center; gap: 12px; width: 100%;
+  margin: 0 0 14px; padding: 12px 14px; cursor: pointer; text-align: left;
+  font-family: inherit; color: var(--text);
+  background: linear-gradient(135deg, rgba(216, 181, 84, 0.16), rgba(167, 255, 235, 0.08));
+  border: 1px solid rgba(216, 181, 84, 0.4); border-radius: var(--radius);
+}
+.champ-replay:active { transform: scale(0.99); }
+.champ-replay-cup { font-size: 1.5rem; flex: 0 0 auto; }
+.champ-replay-txt { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.champ-replay-txt b { font-size: 0.86rem; font-weight: 800; }
+.champ-replay-txt i { font-size: 0.72rem; font-style: normal; font-weight: 700; color: var(--gold); }
