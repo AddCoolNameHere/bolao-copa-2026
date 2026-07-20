@@ -11,15 +11,11 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=18" />
+  <link rel="stylesheet" href="style.css?v=19" />
   <script>
-    /* decide antes da 1ª pintura: quem já viu o pôster não vê nem um flash dele */
-    try {
-      if (localStorage.getItem('bolao_campeao_2026') !== '1')
-        document.documentElement.classList.add('champ-open');
-    } catch (e) {
-      document.documentElement.classList.add('champ-open');
-    }
+    /* o pôster do campeão abre em toda visita — marcado antes da 1ª pintura
+       pra ele já vir junto com a página, sem piscar o site por trás */
+    document.documentElement.classList.add('champ-open');
   </script>
 </head>
 <body>
@@ -227,7 +223,7 @@
 
   <div id="toast" class="toast" hidden></div>
 
-  <script src="curiosidades.js?v=18"></script>
-  <script src="app.js?v=18"></script>
+  <script src="curiosidades.js?v=19"></script>
+  <script src="app.js?v=19"></script>
 </body>
 </html>

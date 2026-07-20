@@ -1201,12 +1201,12 @@
   // ------------------------------------------------------- splash do campeão
   // O <html> já nasce com .champ-open (script inline no index.html) para o
   // pôster pintar junto com a página, sem esperar o loadData().
+  // Sem persistência: o pôster reaparece a cada visita, de propósito.
   const root = document.documentElement;
 
   function closeChamp() {
     const el = $('#champ-splash');
     if (!root.classList.contains('champ-open')) return;
-    try { localStorage.setItem('bolao_campeao_2026', '1'); } catch (e) {}
     el.classList.add('closing');
     setTimeout(() => {
       root.classList.remove('champ-open');
